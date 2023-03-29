@@ -1,0 +1,7 @@
+.idea/
+.editorconfig
+*user
+src/IdentityApi/bin
+src/IdentityApi/obj
+lib/IdentityLibrary/bin
+lib/IdentityLibrary/obj

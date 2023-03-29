@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{756DA563-3454-411A-8FA6-7CC2E52A3098}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityApi", "src\IdentityApi\IdentityApi.csproj", "{5A737F13-EC61-4263-983E-253E14E62B02}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{2F45E163-9C1F-45A5-9F6F-474A6AA98DE7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityLibrary", "lib\identitylibrary\IdentityLibrary.csproj", "{6639D0B0-582E-4AB2-A445-75A2D217DE1B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5A737F13-EC61-4263-983E-253E14E62B02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A737F13-EC61-4263-983E-253E14E62B02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A737F13-EC61-4263-983E-253E14E62B02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A737F13-EC61-4263-983E-253E14E62B02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6639D0B0-582E-4AB2-A445-75A2D217DE1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6639D0B0-582E-4AB2-A445-75A2D217DE1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6639D0B0-582E-4AB2-A445-75A2D217DE1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6639D0B0-582E-4AB2-A445-75A2D217DE1B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5A737F13-EC61-4263-983E-253E14E62B02} = {756DA563-3454-411A-8FA6-7CC2E52A3098}
+		{6639D0B0-582E-4AB2-A445-75A2D217DE1B} = {2F45E163-9C1F-45A5-9F6F-474A6AA98DE7}
+	EndGlobalSection
+EndGlobal
