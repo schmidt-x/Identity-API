@@ -1,0 +1,31 @@
+﻿namespace IdentityApi.Controllers;
+
+[ApiController, Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+	private readonly IAuthService _authService;
+
+	public AuthController(IAuthService authService)
+	{
+		_authService = authService;
+	}
+	
+	
+	[HttpPost("register")]
+	[ServiceFilter(typeof(ValidationFilter))]
+	public async Task<IActionResult> Register(UserRegister userRegister)
+	{
+		var authenticationResult = await _authService.RegisterAsync(userRegister);
+		
+		if (!authenticationResult.Success)
+			return BadRequest(new AuthFailedResponse { Errors = authenticationResult.Errors });
+		
+		var tokenGenerationResult = await _authService.GenerateTokensAsync(authenticationResult.UserClaims);
+		
+		_authService.SetRefreshToken(tokenGenerationResult.RefreshToken, Response);
+		
+		return Ok(new AuthSuccessResponse { AccessToken = tokenGenerationResult.AccessToken });
+	}
+	
+}
+
