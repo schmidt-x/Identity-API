@@ -17,3 +17,4 @@ global using IdentityLibrary.Extensions;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.AspNetCore.Mvc.Filters;
 global using IdentityApi.FIlters;
+global using IdentityApi.Extensions;

@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.FIlters;
 
-public class ValidationFilter : IAsyncActionFilter
+public class ValidationActionFilter : IAsyncActionFilter
 {
 	public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
 	{

@@ -1,5 +1,3 @@
-using IdentityApi.Validators;
-
 namespace IdentityApi;
 
 public class Program
@@ -11,13 +9,17 @@ public class Program
 		builder.Host.UseSerilog((context, config) =>
 			config.ReadFrom.Configuration(context.Configuration));
 		
-		builder.Services.AddScoped<ValidationFilter>();
+		// builder.Services.AddScoped<ValidationFilter>();
 		
 		builder.Services.AddIdentityLibrary();
-		builder.Services.AddControllers()
-			.ConfigureApiBehaviorOptions(abo => abo.SuppressModelStateInvalidFilter = true);
 		
-		builder.Services.AddScoped<IValidator<UserRegister>, UserRegisterValidator>();
+		builder.Services.AddControllers(options =>
+		{
+			options.Filters.Add<ValidationActionFilter>();
+			options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+		}).ConfigureApiBehaviorOptions(abo => abo.SuppressModelStateInvalidFilter = true);
+		
+		builder.Services.AddUserValidation();
 		builder.Services.AddFluentValidationAutoValidation();
 		
 		var app = builder.Build();
