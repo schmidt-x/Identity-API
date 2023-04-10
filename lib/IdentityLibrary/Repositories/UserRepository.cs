@@ -52,13 +52,25 @@ public class UserRepository : IUserRepository
 		return result;
 	}
 
-	public Task<User?> GetAsync(string username)
+	public async Task<User?> GetAsync(string username)
 	{
-		throw new NotImplementedException();
+		using var cnn = CreateConnection();
+		
+		var sql = """
+			SELECT * FROM [User] WHERE username = @username
+		""";
+		
+		return await cnn.QueryFirstOrDefaultAsync<User>(sql, new { username });
 	}
 
-	public Task<UserClaims?> GetClaims(Guid id)
+	public async Task<UserClaims?> GetClaims(Guid userId)
 	{
-		throw new NotImplementedException();
+		using var cnn = CreateConnection();
+		
+		var sql = """
+			SELECT id, username, email FROM [User] WHERE id = @userId
+		""";
+		
+		return await cnn.QueryFirstOrDefaultAsync<UserClaims>(sql, new { userId });
 	}
 }

@@ -53,29 +53,30 @@ public class AuthService : IAuthService
 		};
 	}
 
-	public Task<AuthenticationResult> AuthenticateAsync(UserLogin userRegister)
+	public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userRegister)
 	{
-		throw new System.NotImplementedException();
-	}
-
-	public Task<AuthenticationResult> ValidateTokensAsync(string accessTokenRequest, string RefreshTokenRequest)
-	{
-		throw new System.NotImplementedException();
-	}
-
-	public void SetRefreshToken(string refreshToken, HttpResponse response)
-	{
-		var base64UrlRefreshToken = Base64UrlEncoder.Encode(refreshToken);
-		var cookieOptions = new CookieOptions
-		{
-			HttpOnly = true,
-			Secure = true,
-			Expires = DateTimeOffset.UtcNow.AddMonths(6)
-		};
+		var user = await _userRepo.GetAsync(userRegister.Username);
 		
-		response.Cookies.Append("jwt_refresh_token", base64UrlRefreshToken, cookieOptions);
+		if (user == null)
+			return new AuthenticationResult { Errors = new() { {"auth", "incorrect login or password"} } };
+		
+		var isCorrect = ValidateHashedValue(userRegister.Password, user.Password);
+		
+		if (!isCorrect)
+			return new AuthenticationResult { Errors = new() { {"auth", "incorrect login or password"} } };
+		
+		return new()
+		{
+			Success = true,
+			UserClaims = new()
+			{
+				Id = user.Id,
+				Email = user.Email,
+				Role = user.Role
+			}
+		};
 	}
-
+	
 	public async Task<TokenGenerationResult> GenerateTokensAsync(UserClaims claims)
 	{
 		var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
@@ -100,11 +101,10 @@ public class AuthService : IAuthService
 		};
 		
 		var securityToken = jwtHandler.CreateToken(tokenDescriptor);
-		var refreshTokenId = Guid.NewGuid().ToString(); 
 		
 		var refreshToken = new RefreshToken
 		{
-			Id = HashValue(refreshTokenId),
+			Id = Guid.NewGuid(),
 			Jti = Guid.Parse(securityToken.Id),
 			CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
 			ExpiresAt = DateTimeOffset.UtcNow.AddMonths(6).ToUnixTimeSeconds(),
@@ -116,15 +116,33 @@ public class AuthService : IAuthService
 		return new()
 		{
 			AccessToken = jwtHandler.WriteToken(securityToken),
-			RefreshToken = refreshTokenId
+			RefreshToken = refreshToken.Id.ToString()
 		};
 	}
+
+	public Task<AuthenticationResult> ValidateTokensAsync(string accessTokenRequest, string RefreshTokenRequest)
+	{
+		throw new System.NotImplementedException();
+	}
+
 
 	public TokenExtractionResult ExtractTokens(HttpRequest request)
 	{
 		throw new System.NotImplementedException();
 	}
 	
+	public void SetRefreshToken(string refreshToken, HttpResponse response)
+	{
+		var base64UrlRefreshToken = Base64UrlEncoder.Encode(refreshToken);
+		var cookieOptions = new CookieOptions
+		{
+			HttpOnly = true,
+			Secure = true,
+			Expires = DateTimeOffset.UtcNow.AddMonths(6)
+		};
+		
+		response.Cookies.Append("jwt_refresh_token", base64UrlRefreshToken, cookieOptions);
+	}
 	private SqlConstraintResult GetSqlUQConstraint(SqlException ex)
 	{
 		var message = ex.Message;

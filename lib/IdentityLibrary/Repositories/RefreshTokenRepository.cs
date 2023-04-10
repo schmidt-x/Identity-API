@@ -23,7 +23,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		await cnn.ExecuteAsync(sql, refreshToken);
 	}
 
-	public async Task<RefreshToken?> GetAsync(string id)
+	public async Task<RefreshToken?> GetAsync(Guid tokenId)
 	{
 		using var cnn = CreateConnection();
 		
@@ -31,16 +31,40 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 			SELECT * FROM RefreshToken WHERE id = @id
 		""";
 		
-		return await cnn.QueryFirstOrDefaultAsync<RefreshToken>(sql, new { id });
+		return await cnn.QueryFirstOrDefaultAsync<RefreshToken>(sql, new { id = tokenId });
 	}
 
-	public Task SetUsedAsync(Guid id)
+	public Task SetUsedAsync(Guid tokenId)
 	{
-		throw new NotImplementedException();
+		var sql = """
+			UPDATE RefreshToken SET used = 1 WHERE id = @arg
+		""";
+		
+		return ExecuteAsync(sql, tokenId);
 	}
 
-	public Task InvalidateAsync(Guid id)
+	public Task InvalidateAsync(Guid tokenId)
 	{
-		throw new NotImplementedException();
+		var sql = """
+			UPDATE RefreshToken SET invalidated = 1 WHERE id = @arg
+		""";
+		
+		return ExecuteAsync(sql, tokenId);
+	}
+	
+	public Task InvalidateAllAsync(Guid userId)
+	{
+		var sql = """
+			UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @arg
+		""";
+		
+		return ExecuteAsync(sql, userId);
+	}
+	
+	private async Task ExecuteAsync<T>(string sql, T arg)
+	{
+		using var cnn = CreateConnection();
+		
+		await cnn.ExecuteAsync(sql, new { arg });
 	}
 }

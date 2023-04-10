@@ -27,8 +27,25 @@ public class AuthController : ControllerBase
 	}
 	
 	[HttpPost("login")]
-	public IActionResult Login(UserLogin userLogin)
+	public async Task<IActionResult> Login(UserLogin userLogin)
 	{
+		var authResult = await _authService.AuthenticateAsync(userLogin);
+		
+		if (!authResult.Success)
+			return Unauthorized(new AuthFailedResponse { Errors = authResult.Errors });
+		
+		var tokenGenerationResult = await _authService.GenerateTokensAsync(authResult.UserClaims);
+		
+		_authService.SetRefreshToken(tokenGenerationResult.RefreshToken, Response);
+		
+		return Ok(new AuthSuccessResponse { AccessToken = tokenGenerationResult.AccessToken });
+	}
+	
+	[HttpGet("refresh_token")]
+	public async Task<IActionResult> Refresh()
+	{
+		var context = HttpContext;
+		
 		
 		
 		
