@@ -3,7 +3,7 @@
 public interface IRefreshTokenRepository
 {
 	Task SaveAsync(RefreshToken refreshToken);
-	Task<RefreshToken?> GetAsync(Guid id);
+	Task<RefreshToken?> GetAsync(string id);
 	Task SetUsedAsync(Guid id);
 	Task InvalidateAsync(Guid id);
 }

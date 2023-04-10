@@ -11,19 +11,27 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 	}
 	
 	
-	public Task SaveAsync(RefreshToken refreshToken)
-	{
-		
-		
-		throw new NotImplementedException();
-	}
-
-	public Task<RefreshToken?> GetAsync(Guid id)
+	public async Task SaveAsync(RefreshToken refreshToken)
 	{
 		using var cnn = CreateConnection();
 		
+		var sql = """
+			INSERT INTO RefreshToken (id, jti, created_at, expires_at, used, invalidated, user_id) 
+			VALUES (@id, @jti, @createdAt, @expiresAt, @used, @invalidated, @userId)
+		""";
 		
-		throw new NotImplementedException();
+		await cnn.ExecuteAsync(sql, refreshToken);
+	}
+
+	public async Task<RefreshToken?> GetAsync(string id)
+	{
+		using var cnn = CreateConnection();
+		
+		var sql = """
+			SELECT * FROM RefreshToken WHERE id = @id
+		""";
+		
+		return await cnn.QueryFirstOrDefaultAsync<RefreshToken>(sql, new { id });
 	}
 
 	public Task SetUsedAsync(Guid id)

@@ -12,20 +12,18 @@ public class AuthController : ControllerBase
 	
 	
 	[HttpPost("register")]
-	public IActionResult Register(UserRegister userRegister)
+	public async Task<IActionResult> Register(UserRegister userRegister)
 	{
-		// var authenticationResult = await _authService.RegisterAsync(userRegister);
-		//
-		// if (!authenticationResult.Success)
-		// 	return BadRequest(new AuthFailedResponse { Errors = authenticationResult.Errors });
-		//
-		// var tokenGenerationResult = await _authService.GenerateTokensAsync(authenticationResult.UserClaims);
-		//
-		// _authService.SetRefreshToken(tokenGenerationResult.RefreshToken, Response);
-		//
-		// return Ok(new AuthSuccessResponse { AccessToken = tokenGenerationResult.AccessToken });
+		var authResult = await _authService.RegisterAsync(userRegister);
 		
-		throw new NotImplementedException();
+		if (!authResult.Success)
+			return BadRequest(new AuthFailedResponse { Errors = authResult.Errors });
+		
+		var tokenGenerationResult = await _authService.GenerateTokensAsync(authResult.UserClaims);
+		
+		_authService.SetRefreshToken(tokenGenerationResult.RefreshToken, Response);
+		
+		return Ok(new AuthSuccessResponse { AccessToken = tokenGenerationResult.AccessToken });
 	}
 	
 	[HttpPost("login")]

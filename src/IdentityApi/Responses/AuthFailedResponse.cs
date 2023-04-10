@@ -2,5 +2,5 @@
 
 public class AuthFailedResponse
 {
-	public IEnumerable<string> Errors { get; set; }
+	public Dictionary<string, string> Errors { get; set; }
 }

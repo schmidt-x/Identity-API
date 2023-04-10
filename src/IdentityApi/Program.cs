@@ -9,8 +9,6 @@ public class Program
 		builder.Host.UseSerilog((context, config) =>
 			config.ReadFrom.Configuration(context.Configuration));
 		
-		// builder.Services.AddScoped<ValidationFilter>();
-		
 		builder.Services.AddIdentityLibrary();
 		
 		builder.Services.AddControllers(options =>

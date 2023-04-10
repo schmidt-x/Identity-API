@@ -13,14 +13,43 @@ public class UserRepository : IUserRepository
 	}
 	
 	
-	public Task SaveAsync(User user)
+	public async Task SaveAsync(User user)
 	{
-		throw new NotImplementedException();
+		using var cnn = CreateConnection();
+		
+		var sql = """
+			INSERT INTO [User] (id, username, email, password, created_at, role)
+			VALUES (@id, @username, @email, @password, @createdAt, @role)
+		""";
+		
+		await cnn.ExecuteAsync(sql, user);
 	}
 
-	public Task<ExistsResult> ExistsAsync(string username, string email)
+	public async Task<ExistsResult> ExistsAsync(string username, string email)
 	{
-		throw new NotImplementedException();
+		using var cnn = CreateConnection();
+		
+		var sql = """
+			SELECT 1 FROM [User] WHERE username = @username
+			SELECT 1 FROM [User] WHERE email = @email
+		""";
+		
+		using var multi = await cnn.QueryMultipleAsync(sql, new { username, email });
+		var usernameExists = multi.ReadFirstOrDefault<bool>();
+		var emailExists = multi.ReadFirstOrDefault<bool>();
+		
+		if (!usernameExists && !emailExists) 
+			return new() { Exists = false };
+		
+		var result = new ExistsResult { Exists = true, Errors = new() };
+		
+		if (usernameExists)
+			result.Errors.Add("username", "Username is already taken");
+			 
+		if (emailExists)
+			result.Errors.Add("email", "Email is already used");
+			
+		return result;
 	}
 
 	public Task<User?> GetAsync(string username)

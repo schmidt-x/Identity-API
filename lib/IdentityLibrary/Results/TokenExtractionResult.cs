@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace IdentityLibrary.Results;
+﻿namespace IdentityLibrary.Results;
 
 public class TokenExtractionResult
 {
