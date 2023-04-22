@@ -2,10 +2,12 @@
 
 public class RefreshTokenRepository : IRefreshTokenRepository
 {
-	private readonly IConfiguration _config;
-	private IDbConnection CreateConnection() => new SqlConnection(_config.GetConnectionString("Default"));
+	private readonly DbConfig _config;
 	
-	public RefreshTokenRepository(IConfiguration config)
+	private IDbConnection CreateConnection() => 
+		new SqlConnection(_config.ConnectionString);
+	
+	public RefreshTokenRepository(DbConfig config)
 	{
 		_config = config;
 	}

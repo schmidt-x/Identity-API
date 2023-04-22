@@ -1,4 +1,4 @@
-﻿namespace IdentityApi.FIlters;
+﻿namespace IdentityApi.Filters;
 
 public class ValidationActionFilter : IAsyncActionFilter
 {
@@ -6,14 +6,14 @@ public class ValidationActionFilter : IAsyncActionFilter
 	{
 		if (!context.ModelState.IsValid)
 		{
-			var errorsDic = new Dictionary<string, List<string>>();
+			var errors = new Dictionary<string, IEnumerable<string>>();
 			
 			foreach(var (key, item) in context.ModelState)
-				foreach(var error in item.Errors)
-					if (!errorsDic.TryAdd(key, new() { error.ErrorMessage }))
-						errorsDic[key].Add(error.ErrorMessage);
+			{
+				errors[key] = item.Errors.Select(error => error.ErrorMessage).ToList();
+			}
 			
-			context.Result = new BadRequestObjectResult(new { Errors = errorsDic });
+			context.Result = new BadRequestObjectResult(new FailResponse { Errors = errors });
 			return;
 		}
 		

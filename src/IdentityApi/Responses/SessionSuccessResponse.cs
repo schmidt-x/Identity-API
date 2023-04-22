@@ -1,7 +1,6 @@
 ﻿namespace IdentityApi.Responses;
 
-public class AuthSuccessResponse
+public class SessionSuccessResponse
 {
 	public string Message { get; set; }
-	public string AccessToken { get; set; }
 }

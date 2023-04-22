@@ -1,6 +1,4 @@
-﻿using System.Linq;
-
-namespace IdentityApi.Validators;
+﻿namespace IdentityApi.Validation;
 
 public class UserRegisterValidator : AbstractValidator<UserRegister>
 {
@@ -8,9 +6,6 @@ public class UserRegisterValidator : AbstractValidator<UserRegister>
 	{
 		RuleFor(x => x.Username)
 			.Custom(ValidateUsername);
-		
-		RuleFor(x => x.Email)
-			.Custom(ValidateEmail);
 		
 		RuleFor(x => x.Password)
 			.Custom(ValidatePassword);
@@ -39,7 +34,7 @@ public class UserRegisterValidator : AbstractValidator<UserRegister>
 		}
 
 		if (confirmPassword != context.InstanceToValidate.Password)
-			context.AddFailure("Password do not match");
+			context.AddFailure("Passwords not match");
 	}
 	private static void ValidatePassword(string? password, ValidationContext<UserRegister> context)
 	{
@@ -72,60 +67,5 @@ public class UserRegisterValidator : AbstractValidator<UserRegister>
 		if(!symbol) context.AddFailure("Password must contain at least one symbol");
 		if(!lower) context.AddFailure("Password must contain at least one lower-case character");
 		if(!upper) context.AddFailure("Password must contain at least one upper-case character");
-	}
-	private static void ValidateEmail(string? email, ValidationContext<UserRegister> context)
-	{
-		if (string.IsNullOrWhiteSpace(email))
-		{
-			context.AddFailure("Email required");
-			return;
-		}
-		
-		var errorMessage = "Email invalid";
-		
-		if (!char.IsLetter(email[0]))
-		{
-			context.AddFailure(errorMessage);
-			return;
-		}
-		
-		var parts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
-		
-		if (parts.Length != 2)
-		{
-			context.AddFailure(errorMessage);
-			return;
-		}
-		 
-		var local = parts[0];
-		
-		if (!char.IsLetter(local[^1]))
-		{
-			context.AddFailure(errorMessage);
-			return;
-		}
-		
-		var domainParts = parts[1].Split('.');
-		
-		if (domainParts.Length < 2)
-		{
-			context.AddFailure(errorMessage);
-			return;
-		}
-		
-		foreach(var part in domainParts)
-		{
-			if (part.Length < 1)
-			{
-				context.AddFailure(errorMessage);
-				return;
-			}
-			
-			if (part.Any(l => !char.IsLetter(l) && !char.IsDigit(l) && l != '-'))
-			{
-				context.AddFailure(errorMessage);
-				return;
-			}
-		}
 	}
 }

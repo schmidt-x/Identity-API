@@ -1,4 +1,4 @@
-﻿namespace IdentityApi.Validators;
+﻿namespace IdentityApi.Validation;
 
 public class UserLoginValidator : AbstractValidator<UserLogin>
 {

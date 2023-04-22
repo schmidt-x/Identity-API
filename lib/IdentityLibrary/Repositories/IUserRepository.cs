@@ -2,8 +2,9 @@
 
 public interface IUserRepository
 {
+	Task<bool> EmailExistsAsync(string email);
 	Task SaveAsync(User user);
-	Task<ExistsResult> ExistsAsync(string username, string email);
+	Task<bool> UsernameExistsAsync(string username);
 	Task<User?> GetAsync(string username);
-	Task<UserClaims?> GetClaims(Guid userId); 
+	Task<UserClaims?> GetClaims(Guid userId);
 }
