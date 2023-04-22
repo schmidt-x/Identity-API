@@ -5,4 +5,4 @@ src/IdentityApi/bin
 src/IdentityApi/obj
 lib/IdentityLibrary/bin
 lib/IdentityLibrary/obj
-appsettings.Development.json
+src/IdentityApi/appsettings.Development.json
