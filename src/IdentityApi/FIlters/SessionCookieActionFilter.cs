@@ -10,9 +10,6 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 		
 		if (!ctx.Request.Cookies.TryGetValue("session_id", out var rawSessionId))
 		{
-			var request = ctx.Request;
-			ctx.Response.Headers.Location = $"{request.Scheme}://{request.Host}/api/auth/session";
-			
 			context.Result = new BadRequestObjectResult(new FailResponse { Errors = new()
 			{
 				{ "SessionID", new[] { "Session ID is required" } }

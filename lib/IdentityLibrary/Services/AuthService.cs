@@ -27,11 +27,11 @@ public class AuthService : IAuthService
 	
 	public async Task<SessionResult> CreateSessionAsync(string email)
 	{
-		// if (await _userRepo.EmailExistsAsync(email))
-			// return new SessionResult { Errors = new()
-			// {
-				// { "Email", new[] { $"This '{email}' email address is already in use" } }
-			// }};
+		if (await _userRepo.EmailExistsAsync(email))
+			return new SessionResult { Errors = new()
+			{
+				{ "Email", new[] { $"This '{email}' email address is already in use" } }
+			}};
 		
 		string verificationCode = GenerateVerificationCode();
 		
@@ -49,7 +49,7 @@ public class AuthService : IAuthService
 		
 		return new SessionResult
 		{
-			Success = true,
+			Succeeded = true,
 			Id = sessionId
 		};
 	}
@@ -69,7 +69,7 @@ public class AuthService : IAuthService
 		} 
 		else if (session.Attempts >= 3)
 		{
-			error = new[] { "No attmempts left" };
+			error = new[] { "No attmempts are left" };
 		}
 		else if (session.VerificationCode != verificationCode)
 		{
@@ -78,9 +78,9 @@ public class AuthService : IAuthService
 			
 			var errorMessage = (attempts) switch
 			{
-				1 => "One last attempt left",
-				2 => "Two more attempts left",
-				_ => "No attempts left"
+				1 => "1 last attempt is left",
+				2 => "2 more attempts are left",
+				_ => "No attempts are left"
 			};
 			
 			error = new[] { "Wrong verification code", errorMessage };
@@ -92,7 +92,104 @@ public class AuthService : IAuthService
 		}
 		
 		session!.IsVerified = true;
-		return new SessionResult { Success = true };
+		return new SessionResult { Succeeded = true };
+	}
+	
+	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegister userRegister)
+	{
+		var key = "";
+		string[]? errors = null;
+		
+		if (!_userSession.TryGetValue<UserSession>(sessionId, out var session))
+		{
+			key = "session";
+			errors = new[] { "No session is found" };
+		}
+		else if (session!.IsVerified == false)
+		{
+			key = "email";
+			errors = new[] { "Email address is not verified" };
+		}
+		
+		if (errors != null)
+		{
+			return new AuthenticationResult { Errors = new() { { key, errors } } };
+		}
+		
+		var userResult = await _userRepo.UserExistsAsync(session!.EmailAddress, userRegister.Username);
+		
+		if (userResult.Exists)
+		{
+			return new AuthenticationResult { Errors = userResult.Errors };
+		}
+		
+		var user = new User
+		{
+			Id = Guid.NewGuid(),
+			Username = userRegister.Username,
+			Password = userRegister.Password, // hash it
+			CreatedAt = DateTime.UtcNow,
+			Email = session.EmailAddress,
+			Role = "user"
+		};
+		
+		try
+		{
+			await _userRepo.SaveAsync(user);
+		}
+		catch(SqlException ex) when (ex.Number == 2627)
+		{
+			// TODO handle race condition
+		}
+		
+		return new AuthenticationResult
+		{
+			Succeeded = true,
+			UserId = user.Id
+		};
+	}
+	
+	public async Task<TokenGenerationResult> GenerateTokensAsync(Guid userId)
+	{
+		var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
+		var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+		var handler = new JwtSecurityTokenHandler();
+		
+		var jti = Guid.NewGuid();
+		
+		var identity = new ClaimsIdentity(new[]
+		{
+			new Claim("id", userId.ToString()),
+			new Claim("jti", jti.ToString()),
+		}, "Bearer");
+		
+		var descriptor = new SecurityTokenDescriptor
+		{
+			Subject = identity,
+			Audience = _jwtConfig.Audience,
+			Issuer = _jwtConfig.Issuer,
+			Expires = DateTime.UtcNow.AddMinutes(5),
+			SigningCredentials = credentials
+		};
+		
+		var securityToken = handler.CreateToken(descriptor);
+		
+		var refreshToken = new RefreshToken
+		{
+			Id = Guid.NewGuid(),
+			Jti = jti,
+			CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+			ExpiresAt = DateTimeOffset.UtcNow.AddMonths(6).ToUnixTimeMilliseconds(),
+			UserId = userId,
+		};
+		
+		await _tokenRepo.SaveAsync(refreshToken);
+		
+		return new TokenGenerationResult
+		{
+			AccessToken = handler.WriteToken(securityToken),
+			RefreshToken = refreshToken.Id
+		};
 	}
 	
 	
@@ -127,78 +224,8 @@ public class AuthService : IAuthService
 		smtpClient.Send(emailMessage);
 	}
 	
-	// public void SetHttpSecureCookie(string key, string value, DateTimeOffset expires)
-	// {
-	// 	var cookieOptions = new CookieOptions
-	// 	{
-	// 		HttpOnly = true,
-	// 		Secure = true,
-	// 		Expires = expires
-	// 	};
-	// 	
-	// 	_context.Response.Cookies.Append(key, value, cookieOptions);
-	// }
-	//
-	// public SessionResult VerifyCode(string verificationCode)
-	// {
-	// 	var key = "sessionId";
-	// 	string? error;
-	// 	 
-	// 	if (!_context.Request.Cookies.TryGetValue("session_id", out var rawSessionId))
-	// 	{
-	// 		error = "Session ID is required";
-	// 	}
-	// 	else if (!Guid.TryParse(rawSessionId, out var sessionId))
-	// 	{
-	// 		error = "Invalid Session ID";
-	// 	}
-	// 	else if (!_userSessions.TryGetValue(sessionId, out var session))
-	// 	{
-	// 		error = "No Session was found";
-	// 	}
-	// 	else if (session.VerificationCode != verificationCode)
-	// 	{
-	// 		key = "code";
-	// 		error = "Wrong verification code";
-	// 	}
-	// 	else
-	// 	{
-	// 		session.IsVerified = true;
-	// 		return new SessionResult { Success = true };
-	// 	}
-	// 	
-	// 	return new SessionResult { Errors = new() { { key, new[] { error } } } };
-	// }
-	//
-	// public async Task<AuthenticationResult> RegisterAsync(UserRegister userRegister)
-	// {
-	// 	// TODO make a method that extracts and validates the session
-	// 	
-	// 	var sessionResult = GetSession();
-	// 	
-	// 	if (!sessionResult.Success)
-	// 		return new AuthenticationResult { Errors = sessionResult.Errors };
-	// 	
-	// 	if (!sessionResult.Session.IsVerified)
-	// 		return new AuthenticationResult { Errors = new() { { "Email", new[] { "Email address is not verified" } } } };
-	// 	
-	// 	if (await _userRepo.UsernameExistsAsync(userRegister.Username))
-	// 		return new AuthenticationResult { Errors = new()
-	// 		{
-	// 			{ "username", new[] { $"Username '{userRegister.Username}' is already taken" } }
-	// 		}};
-	// 	
-	// 	
-	// 	var user = new User
-	// 	{
-	// 		Id = Guid.NewGuid(),
-	// 		Username = userRegister.Username,
-	// 		Email = sessionResult.Session.EmailAddress,
-	// 		Password = HashValue(userRegister.Password),
-	// 		Role = "user",
-	// 		CreatedAt = DateTime.UtcNow
-	// 	};
-	// 	
+	
+	
 	// 	try
 	// 	{
 	// 		await _userRepo.SaveAsync(user);
@@ -212,13 +239,8 @@ public class AuthService : IAuthService
 	// 			{ sqlResult.Column, new[] { sqlResult.ErrorMessage } }
 	// 		}}; 
 	// 	}
-	// 	
-	// 	return new AuthenticationResult
-	// 	{
-	// 		Success = true,
-	// 		UserId = user.Id
-	// 	};
-	// }
+	
+	
 	//
 	// public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userRegister)
 	// {

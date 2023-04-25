@@ -46,8 +46,49 @@ public class UserRepository : IUserRepository
 		
 		return await cnn.QueryFirstOrDefaultAsync<bool>(sql, new { username });
 	}
+	
+	public async Task<UserExistsResult> UserExistsAsync(string email, string username)
+	{
+		using var cnn = CreateConnection();
+		
+		var sql = """
+			IF EXISTS (SELECT 1 FROM [User] WHERE username = @username)
+				SELECT 1
+			ELSE
+				SELECT 0
+			
+			IF EXISTS (SELECT 1 FROM [User] WHERE email = @email)
+				SELECT 1
+			ELSE
+				SELECT 0
+		""";
+		
+		using var multi = await cnn.QueryMultipleAsync(sql, new { username, email });
+		
+		var usernameExists = multi.ReadFirst<bool>();
+		var emailExists = multi.ReadFirst<bool>();
+		
+		if (!usernameExists && !emailExists)
+		{
+			return new UserExistsResult { Exists = false };
+		}
+		
+		var errors = new Dictionary<string, IEnumerable<string>>();
+		
+		if (usernameExists)
+		{
+			errors.Add("username", new[] { $"Username '{username}' is already taken" });
+		}
+		
+		if (emailExists)
+		{
+			errors.Add("email", new[] { $"Email address '{email}' is already taken" });
+		}
+		
+		return new UserExistsResult { Exists = true, Errors = errors };
+	}
 
-	public async Task<User?> GetAsync(string username)
+	public async Task<User?> GetAsync(string username) // TODO return without a password
 	{
 		using var cnn = CreateConnection();
 		
@@ -67,5 +108,5 @@ public class UserRepository : IUserRepository
 		""";
 		
 		return await cnn.QueryFirstOrDefaultAsync<UserClaims>(sql, new { userId });
-	}
+	} // TODO do I need it anymore?
 }

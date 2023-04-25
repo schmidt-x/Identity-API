@@ -7,8 +7,7 @@ public static class ServiceCollectionExtentions
 		return services
 			.AddScoped<IValidator<UserRegister>, UserRegisterValidator>()
 			.AddScoped<IValidator<UserLogin>, UserLoginValidator>()
-			.AddScoped<IValidator<EmailRequest>, EmailRequestValidator>()
-			.AddScoped<IValidator<VerificationRequest>, VerificationRequestValidator>();
+			.AddScoped<IValidator<EmailRequest>, EmailRequestValidator>();
 	}
 	
 	public static IServiceCollection SetIdentityConfiguration(this IServiceCollection services, IConfiguration config)

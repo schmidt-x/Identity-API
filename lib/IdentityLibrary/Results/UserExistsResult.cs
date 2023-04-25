@@ -1,8 +1,7 @@
 ﻿namespace IdentityLibrary.Results;
 
-public class AuthenticationResult
+public class UserExistsResult
 {
-	public Guid UserId { get; set; }
-	public bool Succeeded { get; set; }
+	public bool Exists { get; set; }
 	public Dictionary<string, IEnumerable<string>> Errors { get; set; }
 }
