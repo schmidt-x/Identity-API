@@ -129,6 +129,7 @@ public class AuthService : IAuthService
 			Username = userRegistration.Username,
 			Password = HashValue(userRegistration.Password),
 			CreatedAt = DateTime.UtcNow,
+			// LastUpdatedAt = DateTime.UtcNow, // TODO
 			Email = session.EmailAddress,
 			Role = "user"
 		};
@@ -139,7 +140,8 @@ public class AuthService : IAuthService
 		}
 		catch(SqlException ex) when (ex.Number == 2627)
 		{
-			// TODO handle race condition
+			// TODO to log
+			return new AuthenticationResult { Errors = GetSqlUQConstraintMessage(ex) };
 		}
 		
 		return new AuthenticationResult { Succeeded = true, UserId = user.Id };
@@ -246,52 +248,30 @@ public class AuthService : IAuthService
 		return Bcrypt.Verify(value, hashedValue);
 	}
 	
-	
-	// 	try
-	// 	{
-	// 		await _userRepo.SaveAsync(user);
-	// 	}
-	// 	catch(SqlException ex) when (ex.Number == 2627)
-	// 	{
-	// 		var sqlResult = GetSqlUQConstraint(ex);
-	// 		
-	// 		return new AuthenticationResult { Errors = new()
-	// 		{
-	// 			{ sqlResult.Column, new[] { sqlResult.ErrorMessage } }
-	// 		}}; 
-	// 	}
-	
-	
-	// private SqlConstraintResult GetSqlUQConstraint(SqlException ex)
-	// {
-	// 	var message = ex.Message;
-	// 	var startIndex = 36;
-	// 	var endIndex = message.IndexOf('.') - 1;
-	// 	
-	// 	var constraint = message.Substring(startIndex, endIndex - startIndex);
-	// 	
-	// 	// constraint name template is 'Constraint_Table_Column'
-	// 	// for example 'UQ_User_username' or 'UQ_User_email'
-	// 	var parts = constraint.Split('_'); 
-	// 	var column = parts[2];
-	// 	
-	// 	if (column == "id")
-	// 		throw new Exception("Collision of '[User](id)' column");
-	// 	
-	// 	var errorMessage = column switch
-	// 	{
-	// 		"username" => "Username is already taken",
-	// 		"email" => "Email address is already in use",
-	// 		_ => throw new ArgumentException()
-	// 	};
-	// 	
-	// 	return new SqlConstraintResult
-	// 	{
-	// 		Constraint = parts[0],
-	// 		Table = parts[1],
-	// 		Column = column,
-	// 		ErrorMessage = errorMessage
-	// 	};
-	// }
-	//
+	private Dictionary<string, IEnumerable<string>> GetSqlUQConstraintMessage(SqlException ex)
+	{
+		var message = ex.Message;
+		var startIndex = 36;
+		var endIndex = message.IndexOf('.') - 1;
+		
+		var constraint = message.Substring(startIndex, endIndex - startIndex);
+		
+		// constraint name template is 'Constraint_Table_Column'
+		// for example 'UQ_User_email' or 'UQ_User_username'
+		var parts = constraint.Split('_');
+		var key = parts[2];
+		
+		if (key == "id")
+			throw new ArgumentException($"Collision of guid. Constraint: ({constraint})");
+		
+		var value = key switch
+		{
+			"email" => "Email address is already taken",
+			"username" => "Username is already taken",
+			_ => string.Empty, // TODO What should I do here?
+		};
+		
+		return new() { { key, new[] { value } } };
+		
+	}
 }
