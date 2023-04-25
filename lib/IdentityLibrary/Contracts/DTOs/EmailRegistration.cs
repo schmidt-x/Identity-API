@@ -1,6 +1,6 @@
 ﻿namespace IdentityLibrary.Contracts.DTOs;
 
-public class EmailRequest
+public class EmailRegistration
 {
 	public string Email { get; set; }
 }

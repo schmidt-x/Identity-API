@@ -52,12 +52,12 @@ public class UserRepository : IUserRepository
 		using var cnn = CreateConnection();
 		
 		var sql = """
-			IF EXISTS (SELECT 1 FROM [User] WHERE username = @username)
+			IF EXISTS (SELECT 1 FROM [User] WHERE email = @email)
 				SELECT 1
 			ELSE
 				SELECT 0
-			
-			IF EXISTS (SELECT 1 FROM [User] WHERE email = @email)
+
+			IF EXISTS (SELECT 1 FROM [User] WHERE username = @username)
 				SELECT 1
 			ELSE
 				SELECT 0
@@ -65,8 +65,8 @@ public class UserRepository : IUserRepository
 		
 		using var multi = await cnn.QueryMultipleAsync(sql, new { username, email });
 		
-		var usernameExists = multi.ReadFirst<bool>();
 		var emailExists = multi.ReadFirst<bool>();
+		var usernameExists = multi.ReadFirst<bool>();
 		
 		if (!usernameExists && !emailExists)
 		{
@@ -75,28 +75,29 @@ public class UserRepository : IUserRepository
 		
 		var errors = new Dictionary<string, IEnumerable<string>>();
 		
-		if (usernameExists)
-		{
-			errors.Add("username", new[] { $"Username '{username}' is already taken" });
-		}
-		
 		if (emailExists)
 		{
 			errors.Add("email", new[] { $"Email address '{email}' is already taken" });
 		}
 		
+		if (usernameExists)
+		{
+			errors.Add("username", new[] { $"Username '{username}' is already taken" });
+		}
+		
+		
 		return new UserExistsResult { Exists = true, Errors = errors };
 	}
 
-	public async Task<User?> GetAsync(string username) // TODO return without a password
+	public async Task<User?> GetByEmailAsync(string email)
 	{
 		using var cnn = CreateConnection();
 		
 		var sql = """
-			SELECT * FROM [User] WHERE username = @username
+			SELECT * FROM [User] WHERE email = @email
 		""";
 		
-		return await cnn.QueryFirstOrDefaultAsync<User>(sql, new { username });
+		return await cnn.QueryFirstOrDefaultAsync<User>(sql, new { email });
 	}
 
 	public async Task<UserClaims?> GetClaims(Guid userId)

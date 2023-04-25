@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.Validation;
 
-public class UserRegisterValidator : AbstractValidator<UserRegister>
+public class UserRegisterValidator : AbstractValidator<UserRegistration>
 {
 	public UserRegisterValidator()
 	{
@@ -14,7 +14,7 @@ public class UserRegisterValidator : AbstractValidator<UserRegister>
 			.Custom(ValidateConfirmPassword);
 	}
 
-	private static void ValidateUsername(string username, ValidationContext<UserRegister> context)
+	private static void ValidateUsername(string username, ValidationContext<UserRegistration> context)
 	{
 		if (string.IsNullOrWhiteSpace(username))
 		{
@@ -25,7 +25,7 @@ public class UserRegisterValidator : AbstractValidator<UserRegister>
 		if (username.Length < 3)
 			context.AddFailure("Username must contain at least 3 characters");
 	}
-	private static void ValidateConfirmPassword(string confirmPassword, ValidationContext<UserRegister> context)
+	private static void ValidateConfirmPassword(string confirmPassword, ValidationContext<UserRegistration> context)
 	{
 		if (string.IsNullOrWhiteSpace(confirmPassword))
 		{
@@ -36,11 +36,11 @@ public class UserRegisterValidator : AbstractValidator<UserRegister>
 		if (confirmPassword != context.InstanceToValidate.Password)
 			context.AddFailure("Passwords not match");
 	}
-	private static void ValidatePassword(string? password, ValidationContext<UserRegister> context)
+	private static void ValidatePassword(string? password, ValidationContext<UserRegistration> context)
 	{
 		if (string.IsNullOrWhiteSpace(password))
 		{
-			context.AddFailure("Password required");
+			context.AddFailure("Password is required");
 			return;
 		}
 				

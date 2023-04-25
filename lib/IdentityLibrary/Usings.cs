@@ -21,3 +21,4 @@ global using System.Net;
 global using System.Net.Mail;
 global using IdentityLibrary.Contracts.Configs;
 global using IdentityLibrary.Contracts.DTOs;
+global using Microsoft.Extensions.Caching.Memory;

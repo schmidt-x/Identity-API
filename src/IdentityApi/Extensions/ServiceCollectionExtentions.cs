@@ -5,9 +5,10 @@ public static class ServiceCollectionExtentions
 	public static IServiceCollection AddRequestValidation(this IServiceCollection services)
 	{
 		return services
-			.AddScoped<IValidator<UserRegister>, UserRegisterValidator>()
+			.AddScoped<IValidator<UserRegistration>, UserRegisterValidator>()
 			.AddScoped<IValidator<UserLogin>, UserLoginValidator>()
-			.AddScoped<IValidator<EmailRequest>, EmailRequestValidator>();
+			.AddScoped<IValidator<EmailRegistration>, EmailRequestValidator>()
+			.AddScoped<IValidator<CodeVerification>, CodeVerificaitonValidator>();
 	}
 	
 	public static IServiceCollection SetIdentityConfiguration(this IServiceCollection services, IConfiguration config)

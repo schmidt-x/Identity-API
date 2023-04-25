@@ -1,11 +1,11 @@
 ﻿namespace IdentityApi.Validation;
 
-public class EmailRequestValidator : AbstractValidator<EmailRequest>
+public class EmailRequestValidator : AbstractValidator<EmailRegistration>
 {
 	public EmailRequestValidator()
 	{
 		RuleFor(x => x.Email)
-			.NotEmpty().WithMessage("Email address required")
+			.NotEmpty().WithMessage("Email address is required")
 			.EmailAddress().WithMessage("Invalid email address");
 	}
 }

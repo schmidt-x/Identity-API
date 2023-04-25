@@ -30,7 +30,7 @@ public class AuthService : IAuthService
 		if (await _userRepo.EmailExistsAsync(email))
 			return new SessionResult { Errors = new()
 			{
-				{ "Email", new[] { $"This '{email}' email address is already in use" } }
+				{ "Email", new[] { $"Email address '{email}' is already taken" } }
 			}};
 		
 		string verificationCode = GenerateVerificationCode();
@@ -95,7 +95,7 @@ public class AuthService : IAuthService
 		return new SessionResult { Succeeded = true };
 	}
 	
-	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegister userRegister)
+	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration)
 	{
 		var key = "";
 		string[]? errors = null;
@@ -116,7 +116,7 @@ public class AuthService : IAuthService
 			return new AuthenticationResult { Errors = new() { { key, errors } } };
 		}
 		
-		var userResult = await _userRepo.UserExistsAsync(session!.EmailAddress, userRegister.Username);
+		var userResult = await _userRepo.UserExistsAsync(session!.EmailAddress, userRegistration.Username);
 		
 		if (userResult.Exists)
 		{
@@ -126,8 +126,8 @@ public class AuthService : IAuthService
 		var user = new User
 		{
 			Id = Guid.NewGuid(),
-			Username = userRegister.Username,
-			Password = userRegister.Password, // hash it
+			Username = userRegistration.Username,
+			Password = HashValue(userRegistration.Password),
 			CreatedAt = DateTime.UtcNow,
 			Email = session.EmailAddress,
 			Role = "user"
@@ -142,11 +142,7 @@ public class AuthService : IAuthService
 			// TODO handle race condition
 		}
 		
-		return new AuthenticationResult
-		{
-			Succeeded = true,
-			UserId = user.Id
-		};
+		return new AuthenticationResult { Succeeded = true, UserId = user.Id };
 	}
 	
 	public async Task<TokenGenerationResult> GenerateTokensAsync(Guid userId)
@@ -192,6 +188,21 @@ public class AuthService : IAuthService
 		};
 	}
 	
+	public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userLogin)
+	{
+		var user = await _userRepo.GetByEmailAsync(userLogin.Email);
+		
+		if (user == null || !VerifyHashedValue(userLogin.Password, user.Password))
+		{
+			return new AuthenticationResult { Errors = new()
+			{
+				{ "user", new[] { "Incorrect login/password" } }
+			}};
+		}
+		
+		return new AuthenticationResult { Succeeded = true, UserId = user.Id };
+	}
+	
 	
 	private string GenerateVerificationCode()
 	{
@@ -224,6 +235,16 @@ public class AuthService : IAuthService
 		smtpClient.Send(emailMessage);
 	}
 	
+	private string HashValue(string value)
+	{
+		var salt = Bcrypt.GenerateSalt();
+		return Bcrypt.HashPassword(value, salt);
+	}
+	
+	private bool VerifyHashedValue(string value, string hashedValue)
+	{
+		return Bcrypt.Verify(value, hashedValue);
+	}
 	
 	
 	// 	try
@@ -241,120 +262,6 @@ public class AuthService : IAuthService
 	// 	}
 	
 	
-	//
-	// public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userRegister)
-	// {
-	// 	var user = await _userRepo.GetAsync(userRegister.Username);
-	// 	
-	// 	if (user == null)
-	// 		return new AuthenticationResult { Errors = new()
-	// 		{
-	// 			{ "user", new[] { "Invalid Login/Password" } }
-	// 		}};
-	// 	
-	// 	var isCorrect = ValidateHashedValue(userRegister.Password, user.Password);
-	// 	
-	// 	if (!isCorrect)
-	// 		return new AuthenticationResult { Errors = new()
-	// 		{
-	// 			{ "user", new[] { "Invalid Login/Password" } } 
-	// 		}};
-	// 	
-	// 	return new()
-	// 	{
-	// 		Success = true,
-	// 		UserId = user.Id
-	// 	};
-	// }
-	//
-	// public async Task<TokenGenerationResult> GenerateTokensAsync(Guid userId)
-	// {
-	// 	var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
-	// 	var credentiasl = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-	// 	var jwtHandler = new JwtSecurityTokenHandler(); 
-	// 	
-	// 	var jti = Guid.NewGuid();
-	// 	
-	// 	var identity = new ClaimsIdentity(new[]
-	// 	{
-	// 		new Claim("id", userId.ToString()),
-	// 		new Claim("jti", jti.ToString())
-	// 	}, "Bearer");
-	// 	
-	// 	var tokenDescriptor = new SecurityTokenDescriptor
-	// 	{
-	// 		Subject = identity,
-	// 		Audience = _jwtConfig.Audience,
-	// 		Issuer = _jwtConfig.Issuer,
-	// 		Expires = DateTime.UtcNow.AddMinutes(5),
-	// 		SigningCredentials = credentiasl
-	// 	};
-	// 	
-	// 	var securityToken = jwtHandler.CreateToken(tokenDescriptor);
-	// 	
-	// 	var refreshToken = new RefreshToken
-	// 	{
-	// 		Id = Guid.NewGuid(),
-	// 		Jti = jti,
-	// 		CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-	// 		ExpiresAt = DateTimeOffset.UtcNow.AddMonths(6).ToUnixTimeSeconds(),
-	// 		UserId = userId
-	// 	};
-	// 	
-	// 	await _tokenRepo.SaveAsync(refreshToken);
-	// 	
-	// 	return new()
-	// 	{
-	// 		AccessToken = jwtHandler.WriteToken(securityToken),
-	// 		RefreshToken = refreshToken.Id
-	// 	};
-	// }
-	//
-	// public Task<AuthenticationResult> ValidateTokensAsync(string accessTokenRequest, string RefreshTokenRequest)
-	// {
-	// 	
-	// 	
-	// 	
-	// 	
-	// 	// var refreshToken = await _tokenRepository.GetAsync()
-	// 	throw new NotImplementedException();
-	// }
-	//
-	// public TokenExtractionResult ExtractTokens(HttpRequest request)
-	// {
-	// 	
-	// 	
-	// 	
-	// 	throw new System.NotImplementedException();
-	// }
-	//
-	//
-	//
-	//
-	// private SessionResult GetSession()
-	// {
-	// 	var key = "sessionId";
-	// 	string? error = null;
-	// 	UserSession? session = null;
-	// 	
-	// 	if (!_context.Request.Cookies.TryGetValue("session_id", out var rawSessionId))
-	// 	{
-	// 		error = "Session ID is required";
-	// 	}
-	// 	else if (!Guid.TryParse(rawSessionId, out var sessionId))
-	// 	{
-	// 		error = "Invalid Session ID";
-	// 	}
-	// 	else if (!_userSessions.TryGetValue(sessionId, out session))
-	// 	{
-	// 		error = "No Session was found";
-	// 	}
-	// 	
-	// 	return error != null
-	// 		? new SessionResult { Errors = new() { { key, new[] { error } } } }
-	// 		: new SessionResult { Success = true, Session = session! };
-	// }
-	//
 	// private SqlConstraintResult GetSqlUQConstraint(SqlException ex)
 	// {
 	// 	var message = ex.Message;
@@ -387,24 +294,4 @@ public class AuthService : IAuthService
 	// 	};
 	// }
 	//
-	// private string HashValue(string value)
-	// {
-	// 	var salt = Bcrypt.GenerateSalt();
-	// 	var hashedPassword = Bcrypt.HashPassword(value, salt);
-	// 	return hashedPassword;
-	// }
-	//
-	// private bool ValidateHashedValue(string value, string hashedValue)
-	// {
-	// 	return Bcrypt.Verify(value, hashedValue);
-	// }
-	//
-	// private string ExtractCookie()
-	// {
-	// 	// if 
-	// 	// var rawCookie = _context.Request.Cookies
-	// 	
-	// 	
-	// 	return "";
-	// }
 }
