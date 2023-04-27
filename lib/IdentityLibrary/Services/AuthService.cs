@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using IdentityLibrary.Extensions;
 
 namespace IdentityLibrary.Services;
 
@@ -97,30 +97,21 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration)
 	{
-		var key = "";
-		string[]? errors = null;
-		
 		if (!_userSession.TryGetValue<UserSession>(sessionId, out var session))
 		{
-			key = "session";
-			errors = new[] { "No session is found" };
-		}
-		else if (session!.IsVerified == false)
-		{
-			key = "email";
-			errors = new[] { "Email address is not verified" };
+			return AuthenticationResultFail("Session", "No session was found");
 		}
 		
-		if (errors != null)
+		if (session!.IsVerified == false)
 		{
-			return new AuthenticationResult { Errors = new() { { key, errors } } };
+			return AuthenticationResultFail("Email", "Email address is not verified");
 		}
 		
 		var userResult = await _userRepo.UserExistsAsync(session!.EmailAddress, userRegistration.Username);
 		
 		if (userResult.Exists)
 		{
-			return new AuthenticationResult { Errors = userResult.Errors };
+			return AuthenticationResultFail(userResult.Errors);
 		}
 		
 		var user = new User
@@ -129,7 +120,7 @@ public class AuthService : IAuthService
 			Username = userRegistration.Username,
 			Password = HashValue(userRegistration.Password),
 			CreatedAt = DateTime.UtcNow,
-			// LastUpdatedAt = DateTime.UtcNow, // TODO
+			// LastUpdatedAt = DateTime.UtcNow,
 			Email = session.EmailAddress,
 			Role = "user"
 		};
@@ -140,25 +131,23 @@ public class AuthService : IAuthService
 		}
 		catch(SqlException ex) when (ex.Number == 2627)
 		{
-			// TODO to log
-			return new AuthenticationResult { Errors = GetSqlUQConstraintMessage(ex) };
+			return AuthenticationResultFail(GetSqlUQConstraintMessage(ex));
 		}
 		
-		return new AuthenticationResult { Succeeded = true, UserId = user.Id };
+		return AuthenticationResultSuccess(user.Id, user.Email);
 	}
 	
-	public async Task<TokenGenerationResult> GenerateTokensAsync(Guid userId)
+	public async Task<TokenGenerationResult> GenerateTokensAsync(UserClaims user)
 	{
 		var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
 		var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 		var handler = new JwtSecurityTokenHandler();
 		
-		var jti = Guid.NewGuid();
-		
 		var identity = new ClaimsIdentity(new[]
 		{
-			new Claim("id", userId.ToString()),
-			new Claim("jti", jti.ToString()),
+			new Claim("jti", Guid.NewGuid().ToString()),
+			new Claim("id", user.Id.ToString()),
+			new Claim("email", user.Email)
 		}, "Bearer");
 		
 		var descriptor = new SecurityTokenDescriptor
@@ -175,10 +164,10 @@ public class AuthService : IAuthService
 		var refreshToken = new RefreshToken
 		{
 			Id = Guid.NewGuid(),
-			Jti = jti,
+			Jti = securityToken.Id,
 			CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
 			ExpiresAt = DateTimeOffset.UtcNow.AddMonths(6).ToUnixTimeMilliseconds(),
-			UserId = userId,
+			UserId = user.Id,
 		};
 		
 		await _tokenRepo.SaveAsync(refreshToken);
@@ -196,15 +185,60 @@ public class AuthService : IAuthService
 		
 		if (user == null || !VerifyHashedValue(userLogin.Password, user.Password))
 		{
-			return new AuthenticationResult { Errors = new()
-			{
-				{ "user", new[] { "Incorrect login/password" } }
-			}};
+			return AuthenticationResultFail("User", "Incorrect login/password");
 		}
 		
-		return new AuthenticationResult { Succeeded = true, UserId = user.Id };
+		return AuthenticationResultSuccess(user.Id, user.Email);
 	}
 	
+	public async Task<AuthenticationResult> ValidateTokensAsync(RefreshTokenRequest tokens)
+	{
+		if (!Guid.TryParse(tokens.RefreshToken, out var refreshToken))
+		{
+			return AuthenticationResultFail("RefreshToken", "Invalid refresh token");
+		}
+		
+		var tokenHandler = new JwtSecurityTokenHandler();
+		
+		if (!tokenHandler.TryValidate(tokens.AccessToken, _jwtConfig.Parameters, out var validatedToken))
+		{
+			return AuthenticationResultFail("AccessToken", "Invalid access token");
+		}
+		
+		var storedRefreshToken = await _tokenRepo.GetAsync(refreshToken);
+		
+		if (storedRefreshToken == null)
+		{
+			return AuthenticationResultFail("RefreshToken", "Refresh token does not exist");
+		}
+		
+		if (storedRefreshToken.Invalidated)
+		{
+			return AuthenticationResultFail("RefreshToken", "Refresh token is invalidated");
+		}
+		
+		if (storedRefreshToken.Used)
+		{
+			return AuthenticationResultFail("RefreshToken", "Refresh token has already been used");
+		}
+		
+		if (storedRefreshToken.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+		{
+			return AuthenticationResultFail("RefreshToken", "Refresh token has been expired");
+		}
+		
+		if (storedRefreshToken.Jti != validatedToken!.Id)
+		{
+			return AuthenticationResultFail("AccessToken", "Tokens do not match");
+		}
+		
+		await _tokenRepo.SetUsedAsync(refreshToken);
+		
+		var user = await _userRepo.GetClaims(storedRefreshToken.UserId);
+		// TODO Should I handle user == null? Is it possible?
+		
+		return AuthenticationResultSuccess(user!);
+	}
 	
 	private string GenerateVerificationCode()
 	{
@@ -262,7 +296,7 @@ public class AuthService : IAuthService
 		var key = parts[2];
 		
 		if (key == "id")
-			throw new ArgumentException($"Collision of guid. Constraint: ({constraint})");
+			throw new ArgumentException($"Collision of guid. Constraint: '{constraint}'");
 		
 		var value = key switch
 		{
@@ -272,6 +306,42 @@ public class AuthService : IAuthService
 		};
 		
 		return new() { { key, new[] { value } } };
-		
+	}
+	
+	
+	private AuthenticationResult AuthenticationResultFail(string key, params string[] errors)
+	{
+		return new AuthenticationResult 
+		{ 
+			Succeeded = false,
+			Errors = new() { { key, errors } } 
+		};
+	}
+	
+	private AuthenticationResult AuthenticationResultFail(Dictionary<string, IEnumerable<string>> errors)
+	{
+		return new AuthenticationResult { Errors = errors };
+	}
+	
+	private AuthenticationResult AuthenticationResultSuccess(Guid userId, string email)
+	{
+		return new AuthenticationResult
+		{
+			Succeeded = true,
+			User = new()
+			{
+				Id = userId,
+				Email = email
+			}
+		};
+	}
+	
+	private AuthenticationResult AuthenticationResultSuccess(UserClaims user)
+	{
+		return new AuthenticationResult
+		{
+			Succeeded = true,
+			User = user,
+		};
 	}
 }

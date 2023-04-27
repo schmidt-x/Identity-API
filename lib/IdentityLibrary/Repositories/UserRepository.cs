@@ -105,7 +105,7 @@ public class UserRepository : IUserRepository
 		using var cnn = CreateConnection();
 		
 		var sql = """
-			SELECT id, username, email FROM [User] WHERE id = @userId
+			SELECT id, email FROM [User] WHERE id = @userId
 		""";
 		
 		return await cnn.QueryFirstOrDefaultAsync<UserClaims>(sql, new { userId });

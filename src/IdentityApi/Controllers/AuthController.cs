@@ -54,9 +54,9 @@ public class AuthController : ControllerBase
 	/// <response code="200">Email address is successfully verified</response>
 	/// <response code="400">Email verification or validation failed</response>
 	[HttpPost("verification")]
+	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	public IActionResult VerifyEmail(CodeVerification codeVerification)
 	{
 		var id = (string) HttpContext.Items["sessionId"]!;
@@ -95,7 +95,7 @@ public class AuthController : ControllerBase
 			return BadRequest(new FailResponse { Errors = authenticationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.UserId);
+		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User);
 		
 		Response.Cookies.Delete("session_id"); // should I?
 		
@@ -136,7 +136,7 @@ public class AuthController : ControllerBase
 			return Unauthorized(new FailResponse { Errors = authenticationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.UserId);
+		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User);
 		
 		Response.Cookies.Delete("session_id");
 		
@@ -159,26 +159,32 @@ public class AuthController : ControllerBase
 	} 
 	
 	
-	
-// 	
-// 	[HttpGet("refresh_token")]
-// 	public async Task<IActionResult> Refresh()
-// 	{
-// 		var tokensResult = _authService.ExtractTokens(Request);
-// 		
-// 		if (!tokensResult.Success)
-// 			return BadRequest(new AuthFailedResponse { Errors = tokensResult.Errors });
-// 		
-// 		var authResult = await _authService.ValidateTokensAsync(tokensResult.AccessToken, tokensResult.RefreshToken);
-// 		
-// 		if (!authResult.Success)
-// 			return BadRequest(new AuthFailedResponse { Errors = authResult.Errors });
-// 		
-// 		var tokenGenerationResult = await _authService.GenerateTokensAsync(authResult.UserClaims);
-// 		
-// 		_authService.SetRefreshTokenCookie(tokenGenerationResult.RefreshToken, Response);
-// 		
-// 		return Ok(new AuthSuccessResponse { AccessToken = tokenGenerationResult.AccessToken });
-// 	}
-// 	
+	[HttpPost("refresh")]
+	public async Task<IActionResult> RefreshToken(RefreshTokenRequest tokens)
+	{
+		var validationResult = await _authService.ValidateTokensAsync(tokens);
+		
+		if (!validationResult.Succeeded)
+		{
+			return Unauthorized(new FailResponse { Errors = validationResult.Errors });
+		}
+		
+		var tokensResult = await _authService.GenerateTokensAsync(validationResult.User);
+		
+		Response.Cookies.Append(
+			"jwt_refresh_token",
+			tokensResult.RefreshToken.ToString(),
+			new()
+			{
+				HttpOnly = true,
+				Secure = true,
+				Expires = DateTimeOffset.UtcNow.AddMonths(6)
+			});
+		
+		return Ok(new AuthSuccessResponse
+		{
+			Message = "You have successfully refreshed tokens",
+			AccessToken = tokensResult.AccessToken
+		});
+	}
 }

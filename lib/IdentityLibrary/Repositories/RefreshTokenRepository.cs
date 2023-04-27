@@ -30,7 +30,8 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		using var cnn = CreateConnection();
 		
 		var sql = """
-			SELECT * FROM RefreshToken WHERE id = @id
+			SELECT id, jti, created_at createdAt, expires_at expiresAt, used, invalidated, user_id userId
+			FROM RefreshToken WHERE id = @id
 		""";
 		
 		return await cnn.QueryFirstOrDefaultAsync<RefreshToken>(sql, new { id = tokenId });
