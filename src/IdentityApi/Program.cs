@@ -1,3 +1,12 @@
+using System;
+using System.IO;
+using System.Reflection;
+using FluentValidation.AspNetCore;
+using IdentityApi.Extensions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+
 namespace IdentityApi;
 
 public class Program
@@ -9,10 +18,12 @@ public class Program
 		builder.Host.UseSerilog((context, config) =>
 			config.ReadFrom.Configuration(context.Configuration));
 		
-		builder.Services.SetIdentityConfiguration(builder.Configuration);
 		builder.Services.AddFilters();
-		builder.Services.AddRequestValidation();
-		builder.Services.AddIdentityLibrary();
+		builder.Services.AddRepositories();
+		builder.Services.AddDataAccess();
+		builder.Services.AddServices();
+		builder.Services.AddValidation();
+		builder.AddOptions();
 		
 		builder.Services.AddFluentValidationAutoValidation();
 		builder.Services.AddHttpContextAccessor();
@@ -20,7 +31,7 @@ public class Program
 		builder.Services.AddControllers(options =>
 		{
 			options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
-		}).ConfigureApiBehaviorOptions(abo => abo.SuppressModelStateInvalidFilter = true);
+		}).ConfigureApiBehaviorOptions(options => options.SuppressModelStateInvalidFilter = true);
 		
 		builder.Services.AddSwaggerGen(o =>
 		{
@@ -32,14 +43,14 @@ public class Program
 		
 		var app = builder.Build();
 		
+		app.UseSerilogRequestLogging();
+		app.MapControllers();
+		
 		app.UseExceptionHandlerMiddleware();
 		app.UseSwagger();
 		app.UseSwaggerUI();
 		
 		// Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-		
-		app.MapControllers();
-		app.UseSerilogRequestLogging();
 		
 		app.Run();
 	}

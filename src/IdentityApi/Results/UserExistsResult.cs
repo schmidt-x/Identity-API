@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 
-namespace IdentityApi.Responses;
+namespace IdentityApi.Results;
 
-public class FailResponse
+public class UserExistsResult
 {
+	public bool Exists { get; set; }
 	public Dictionary<string, IEnumerable<string>> Errors { get; set; }
 }

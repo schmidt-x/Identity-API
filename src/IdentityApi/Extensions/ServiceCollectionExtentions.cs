@@ -1,55 +1,43 @@
-﻿using System.Text;
+﻿using FluentValidation;
+using IdentityApi.Contracts.DTOs;
+using IdentityApi.Data.DataAccess;
+using IdentityApi.Data.Repositories;
+using IdentityApi.Filters;
+using IdentityApi.Services;
+using IdentityApi.Validation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IdentityApi.Extensions;
 
 public static class ServiceCollectionExtentions
 {
-	public static IServiceCollection AddRequestValidation(this IServiceCollection services)
+	public static IServiceCollection AddValidation(this IServiceCollection services)
 	{
 		return services
 			.AddScoped<IValidator<UserRegistration>, UserRegisterValidator>()
 			.AddScoped<IValidator<UserLogin>, UserLoginValidator>()
 			.AddScoped<IValidator<EmailRegistration>, EmailRequestValidator>()
 			.AddScoped<IValidator<CodeVerification>, CodeVerificaitonValidator>()
-			.AddScoped<IValidator<RefreshTokenRequest>, RefreshTokenRequestValidation>();
+			.AddScoped<IValidator<TokenRefreshing>, TokenRefreshingValidator>();
 	}
 	
-	public static IServiceCollection SetIdentityConfiguration(this IServiceCollection services, IConfiguration config)
+	public static IServiceCollection AddDataAccess(this IServiceCollection services)
 	{
-		services.AddSingleton(new DbConfig
-		{
-			ConnectionString = config.GetConnectionString("SqlServer")!
-		});
-		
-		var secretKey = config["Jwt:SecretKey"]!;
-		var audience = config["Jwt:Audience"]!;
-		var issuer = config["Jwt:Issuer"]!;
-		
-		services.AddSingleton(new JwtConfig
-		{
-			SecretKey = secretKey,
-			Audience = audience,
-			Issuer = issuer,
-			Parameters = new()
-			{
-				ValidIssuer = issuer,
-				ValidAudience = audience,
-				IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-				ValidateIssuer = true,
-				ValidateAudience = true,
-				ValidateIssuerSigningKey = true,
-				ValidateLifetime = false
-			}
-		});
-		
-		services.AddSingleton(new EmailConfig
-		{
-			Address = config["Email:Address"]!,
-			Password = config["Email:Password"]!,
-		});
-		
-		
-		return services;
+		return services
+			.AddScoped<ISqlDataAccess, SqlDataAccess>();
+	}
+	
+	public static IServiceCollection AddRepositories(this IServiceCollection services)
+	{
+		return services
+			.AddScoped<IUserRepository, UserRepository>()
+			.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+	}
+	
+	public static IServiceCollection AddServices(this IServiceCollection services)
+	{
+		return services
+			.AddScoped<IAuthService, AuthService>();
 	}
 	
 	public static IServiceCollection AddFilters(this IServiceCollection services)
@@ -58,4 +46,26 @@ public static class ServiceCollectionExtentions
 			.AddScoped<SessionCookieActionFilter>()
 			.AddScoped<ValidationActionFilter>();
 	}
+	
+	
+	// public static IServiceCollection SetIdentityConfiguration(this IServiceCollection services, IConfiguration config)
+	// {
+		// services.AddSingleton(new JwtConfig
+		// {
+			// SecretKey = secretKey,
+			// Audience = audience,
+			// Issuer = issuer,
+			// Parameters = new()
+			// {
+				// ValidIssuer = issuer,
+				// ValidAudience = audience,
+				// IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+				// ValidateIssuer = true,
+				// ValidateAudience = true,
+				// ValidateIssuerSigningKey = true,
+				// ValidateLifetime = false
+			// }
+		// });
+		// return services;
+	// }
 }

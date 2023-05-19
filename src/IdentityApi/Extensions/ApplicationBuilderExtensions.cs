@@ -1,4 +1,5 @@
 ﻿using IdentityApi.Middleware;
+using Microsoft.AspNetCore.Builder;
 
 namespace IdentityApi.Extensions;
 

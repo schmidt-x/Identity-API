@@ -1,4 +1,13 @@
-﻿namespace IdentityApi.Controllers;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using IdentityApi.Contracts.DTOs;
+using IdentityApi.Filters;
+using IdentityApi.Responses;
+using IdentityApi.Services;
+using Microsoft.AspNetCore.Mvc;
+
+namespace IdentityApi.Controllers;
 
 [Produces("application/json")]
 [ServiceFilter(typeof(ValidationActionFilter))]
@@ -16,15 +25,14 @@ public class AuthController : ControllerBase
 	/// <summary>
 	/// Makes a registration session
 	/// </summary>
-	/// <param name="emailRegistration"></param>
 	/// <response code="200">New session is made and the session id is retured in cookie</response>
 	/// <response code="400">Email address is already in use or validation failed</response>
 	[HttpPost("session")]
 	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> CreateUserSession(EmailRegistration emailRegistration)
+	public async Task<IActionResult> CreateUserSession(EmailRegistration emailRegistration, CancellationToken ct)
 	{
-		var sessionResult = await _authService.CreateSessionAsync(emailRegistration.Email);
+		var sessionResult = await _authService.CreateSessionAsync(emailRegistration.Email, ct);
 		
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
@@ -50,7 +58,6 @@ public class AuthController : ControllerBase
 	/// <summary>
 	/// Verifies an email
 	/// </summary>
-	/// <param name="codeVerification"></param>
 	/// <response code="200">Email address is successfully verified</response>
 	/// <response code="400">Email verification or validation failed</response>
 	[HttpPost("verification")]
@@ -77,25 +84,24 @@ public class AuthController : ControllerBase
 	/// <summary>
 	/// Registers a user
 	/// </summary>
-	/// <param name="userRegistration"></param>
 	/// <response code="200">User is successfully registered</response>
 	/// <response code="400">User already exists or validation failed</response>
 	[HttpPost("registration")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> Register(UserRegistration userRegistration)
+	public async Task<IActionResult> Register(UserRegistration userRegistration, CancellationToken ct)
 	{
 		var id = (string) HttpContext.Items["sessionId"]!;
 		
-		var authenticationResult = await _authService.RegisterAsync(id, userRegistration);
+		var authenticationResult = await _authService.RegisterAsync(id, userRegistration, ct);
 		
 		if (!authenticationResult.Succeeded)
 		{
 			return BadRequest(new FailResponse { Errors = authenticationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User);
+		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
 		
 		Response.Cookies.Delete("session_id"); // should I?
 		
@@ -119,7 +125,6 @@ public class AuthController : ControllerBase
 	/// <summary>
 	/// Logs in a user
 	/// </summary>
-	/// <param name="userLogin"></param>
 	/// <response code="200">User logged in</response>
 	/// <response code="400">Validation failed</response>
 	/// <response code="401">User not found</response>
@@ -127,16 +132,16 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	[ProducesResponseType(typeof(FailResponse), 401)]
-	public async Task<IActionResult> Login(UserLogin userLogin)
+	public async Task<IActionResult> Login(UserLogin userLogin, CancellationToken ct)
 	{
-		var authenticationResult = await _authService.AuthenticateAsync(userLogin);
+		var authenticationResult = await _authService.AuthenticateAsync(userLogin, ct);
 		
 		if (!authenticationResult.Succeeded)
 		{
 			return Unauthorized(new FailResponse { Errors = authenticationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User);
+		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
 		
 		Response.Cookies.Delete("session_id");
 		
@@ -160,16 +165,16 @@ public class AuthController : ControllerBase
 	
 	
 	[HttpPost("refresh")]
-	public async Task<IActionResult> RefreshToken(RefreshTokenRequest tokens)
+	public async Task<IActionResult> RefreshToken(TokenRefreshing tokens, CancellationToken ct)
 	{
-		var validationResult = await _authService.ValidateTokensAsync(tokens);
+		var validationResult = await _authService.ValidateTokensAsync(tokens, ct);
 		
 		if (!validationResult.Succeeded)
 		{
 			return Unauthorized(new FailResponse { Errors = validationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(validationResult.User);
+		var tokensResult = await _authService.GenerateTokensAsync(validationResult.User, ct);
 		
 		Response.Cookies.Append(
 			"jwt_refresh_token",

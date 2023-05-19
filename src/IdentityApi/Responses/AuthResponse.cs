@@ -1,4 +1,6 @@
-﻿namespace IdentityApi.Responses;
+﻿using System.Collections.Generic;
+
+namespace IdentityApi.Responses;
 
 public class AuthResponse
 {

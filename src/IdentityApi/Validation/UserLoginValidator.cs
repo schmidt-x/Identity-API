@@ -1,4 +1,7 @@
-﻿namespace IdentityApi.Validation;
+﻿using FluentValidation;
+using IdentityApi.Contracts.DTOs;
+
+namespace IdentityApi.Validation;
 
 public class UserLoginValidator : AbstractValidator<UserLogin>
 {
