@@ -38,7 +38,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
 		var parameters = new DynamicParameters(new { tokenId }); // TODO is there any difference?
 		
-		return await _db.LoadSingle<RefreshToken>(sql, parameters, ct);
+		return await _db.LoadFirst<RefreshToken>(sql, parameters, ct);
 	}
 
 	public async Task SetUsedAsync(Guid tokenId, CancellationToken ct)

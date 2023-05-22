@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using IdentityApi.Data.DataAccess;
+using IdentityApi.Enums;
 using IdentityApi.Models;
 using IdentityApi.Results;
 
@@ -18,59 +19,50 @@ public class UserRepository : IUserRepository
 		_db = db;
 	}
 	
-	public async Task<bool> EmailExistsAsync(string email, CancellationToken ct)
+	
+	public async Task<bool> ExistsAsync<T>(T arg, Column column, CancellationToken ct = default)
 	{
-		const string sql = """
- 			SELECT IIF(exists(SELECT 1 FROM [User] WHERE email = @email), 1, 0)
- 		""";
- 		
- 		var parameters = new DynamicParameters(new { email });
- 		
- 		return await _db.LoadScalar<bool>(sql, parameters, ct);
-	}
-
-	public Task<bool> UsernameExistsAsync(string username, CancellationToken ct)
-	{
-		throw new NotImplementedException();
-	}
-
-	public async Task<UserExistsResult> UserExistsAsync(string email, string username, CancellationToken ct)
-	{
-		const string sql = """
-			SELECT IIF(exists(SELECT 1 FROM [User] WHERE email = @email), 1, 0)
-			SELECT IIF(exists(SELECT 1 FROM [User] WHERE username = @username), 1, 0)
+		var argName = column switch
+		{
+			Column.Email => "email",
+			Column.Username => "username",
+			_ => ""
+		};
+		
+		var sql = $"""
+			SELECT IIF(exists(SELECT 1 FROM [User] WHERE {argName} = @{argName}), 1, 0)
 		""";
 		
-		var parameters = new DynamicParameters(new { email, username });
+		var parameters = new DynamicParameters();
+		parameters.Add(argName, arg);
 		
-		using var multi = await _db.GetMulti(sql, parameters, ct);
+		var res = await _db.LoadScalar<bool>(sql, parameters, ct);
 		
-		var emailExists = multi.ReadFirst<bool>(); // Exception
-		var usernameExists = multi.ReadFirst<bool>();
-		
-		if (!usernameExists && !emailExists)
-		{
-			return new UserExistsResult { Exists = false };
-		}
-		
-		var errors = new Dictionary<string, IEnumerable<string>>();
-		
-		if (emailExists)
-		{
-			errors.Add("email", new[] { $"Email address '{email}' is already taken" });
-		}
-		
-		if (usernameExists)
-		{
-			errors.Add("username", new[] { $"Username '{username}' is already taken" });
-		}
-		
-		return new UserExistsResult { Exists = true, Errors = errors };
+		return res;
 	}
+	
 
-	public Task SaveAsync(User user, CancellationToken ct)
+	public async Task SaveAsync(User user, CancellationToken ct)
 	{
-		throw new NotImplementedException();
+		const string sql = """
+			INSERT INTO [User] (id, username, email, password, created_at, updated_at, role)
+			VALUES (@id, @username, @email, @password, @createdAt, @updatedAt, @role)
+		""";
+		
+		var param = new DynamicParameters(user); // check if it works
+		
+		var parameters = new DynamicParameters(new
+		{
+			user.Id,
+			user.Username,
+			user.Email,
+			user.Password,
+			user.CreatedAt,
+			user.UpdatedAt,
+			user.Role
+		});
+		
+		await _db.SaveData(sql, parameters, ct);
 	}
 
 	public Task<User?> GetByEmailAsync(string email, CancellationToken ct)
@@ -78,7 +70,7 @@ public class UserRepository : IUserRepository
 		throw new NotImplementedException();
 	}
 
-	public Task<UserClaims?> GetClaims(Guid userId, CancellationToken ct)
+	public Task<UserClaims?> GetClaimsAsync(Guid userId, CancellationToken ct)
 	{
 		throw new NotImplementedException();
 	}

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using IdentityApi.Contracts.DTOs;
 using IdentityApi.Contracts.Options;
 using IdentityApi.Data.Repositories;
+using IdentityApi.Enums;
 using IdentityApi.Extensions;
 using IdentityApi.Models;
 using IdentityApi.Results;
@@ -47,10 +48,10 @@ public class AuthService : IAuthService
 	
 	public async Task<SessionResult> CreateSessionAsync(string email, CancellationToken ct)
 	{
-		if (await _userRepo.EmailExistsAsync(email, ct))
+		if (await _userRepo.ExistsAsync(email, Column.Email, ct))
 			return new SessionResult { Errors = new()
 			{
-				{ "Email", new[] { $"Email address '{email}' is already taken" } }
+				{ "email", new[] { $"Email address '{email}' is already taken" } }
 			}};
 		
 		string verificationCode = GenerateVerificationCode();
@@ -119,27 +120,25 @@ public class AuthService : IAuthService
 	{
 		if (!_userSession.TryGetValue<UserSession>(sessionId, out var session))
 		{
-			return AuthenticationResultFail("Session", "No session was found");
+			return AuthResultFail("session", "No session was found");
 		}
 		
 		if (session!.IsVerified == false)
 		{
-			return AuthenticationResultFail("Email", "Email address is not verified");
+			return AuthResultFail("email", "Email address is not verified");
 		}
 		
-		var userResult = await _userRepo.UserExistsAsync(session.EmailAddress, userRegistration.Username, ct); // TODO
-		
-		if (userResult.Exists)
-		{
-			return AuthenticationResultFail(userResult.Errors);
-		}
+		// if (await _userRepo.ExistsAsync(userRegistration.Username, Column.Username, ct))
+		// {
+		// 	return AuthResultFail("username", $"Username '{userRegistration.Username}' is already taken");
+		// }
 		
 		var timeNow = DateTime.UtcNow;
 		var user = new User
 		{
 			Id = Guid.NewGuid(),
 			Username = userRegistration.Username,
-			Password = HashValue(userRegistration.Password),
+			Password = Bcrypt.HashPassword(userRegistration.Password, Bcrypt.GenerateSalt()),
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
@@ -152,10 +151,10 @@ public class AuthService : IAuthService
 		}
 		catch(SqlException ex) when (ex.Number == 2627)
 		{
-			return AuthenticationResultFail(GetSqlUQConstraintMessage(ex));
+			return AuthResultFail(GetSqlUQConstraintMessage(ex));
 		}
 		
-		return AuthenticationResultSuccess(user.Id, user.Email);
+		return AuthResultSuccess(user.Id, user.Email);
 	}
 	
 	public async Task<TokenGenerationResult> GenerateTokensAsync(UserClaims user, CancellationToken ct)
@@ -205,19 +204,19 @@ public class AuthService : IAuthService
 	{
 		var user = await _userRepo.GetByEmailAsync(userLogin.Email, ct);
 		
-		if (user == null || !VerifyHashedValue(userLogin.Password, user.Password))
+		if (user == null || !Bcrypt.Verify(userLogin.Password, user.Password))
 		{
-			return AuthenticationResultFail("User", "Incorrect login/password");
+			return AuthResultFail("User", "Incorrect login/password");
 		}
 		
-		return AuthenticationResultSuccess(user.Id, user.Email);
+		return AuthResultSuccess(user.Id, user.Email);
 	}
 	
 	public async Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshing tokens, CancellationToken ct)
 	{
 		if (!Guid.TryParse(tokens.RefreshToken, out var refreshToken))
 		{
-			return AuthenticationResultFail("RefreshToken", "Invalid refresh token");
+			return AuthResultFail("RefreshToken", "Invalid refresh token");
 		}
 		
 		var tokenHandler = new JwtSecurityTokenHandler();
@@ -235,42 +234,42 @@ public class AuthService : IAuthService
 		
 		if (!tokenHandler.TryValidate(tokens.AccessToken, parameters, out var validatedToken))
 		{
-			return AuthenticationResultFail("AccessToken", "Invalid access token");
+			return AuthResultFail("AccessToken", "Invalid access token");
 		}
 		
 		var storedRefreshToken = await _tokenRepo.GetAsync(refreshToken, ct);
 		
 		if (storedRefreshToken == null)
 		{
-			return AuthenticationResultFail("RefreshToken", "Refresh token does not exist");
+			return AuthResultFail("RefreshToken", "Refresh token does not exist");
 		}
 		
 		if (storedRefreshToken.Invalidated)
 		{
-			return AuthenticationResultFail("RefreshToken", "Refresh token is invalidated");
+			return AuthResultFail("RefreshToken", "Refresh token is invalidated");
 		}
 		
 		if (storedRefreshToken.Used)
 		{
-			return AuthenticationResultFail("RefreshToken", "Refresh token has already been used");
+			return AuthResultFail("RefreshToken", "Refresh token has already been used");
 		}
 		
 		if (storedRefreshToken.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
 		{
-			return AuthenticationResultFail("RefreshToken", "Refresh token has been expired");
+			return AuthResultFail("RefreshToken", "Refresh token has been expired");
 		}
 		
 		if (storedRefreshToken.Jti != validatedToken!.Id)
 		{
-			return AuthenticationResultFail("AccessToken", "Tokens do not match");
+			return AuthResultFail("AccessToken", "Tokens do not match");
 		}
 		
 		await _tokenRepo.SetUsedAsync(refreshToken, ct);
 		
-		var user = await _userRepo.GetClaims(storedRefreshToken.UserId, ct);
+		var user = await _userRepo.GetClaimsAsync(storedRefreshToken.UserId, ct);
 		// TODO Should I handle user == null? Is it possible?
 		
-		return AuthenticationResultSuccess(user!);
+		return AuthResultSuccess(user!);
 	}
 	
 	
@@ -305,18 +304,7 @@ public class AuthService : IAuthService
 		smtpClient.Send(emailMessage);
 	}
 	
-	private static string HashValue(string value)
-	{
-		var salt = Bcrypt.GenerateSalt();
-		return Bcrypt.HashPassword(value, salt);
-	}
-	
-	private static bool VerifyHashedValue(string value, string hashedValue)
-	{
-		return Bcrypt.Verify(value, hashedValue);
-	}
-	
-	private static Dictionary<string, IEnumerable<string>> GetSqlUQConstraintMessage(SqlException ex)
+	private static Dictionary<string, IEnumerable<string>> GetSqlUQConstraintMessage(SqlException ex) // TODO add actual username
 	{
 		var message = ex.Message;
 		const int startIndex = 36;
@@ -343,7 +331,7 @@ public class AuthService : IAuthService
 	}
 	
 	
-	private static AuthenticationResult AuthenticationResultFail(string key, params string[] errors)
+	private static AuthenticationResult AuthResultFail(string key, params string[] errors)
 	{
 		return new AuthenticationResult 
 		{ 
@@ -352,12 +340,12 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	private static AuthenticationResult AuthenticationResultFail(Dictionary<string, IEnumerable<string>> errors)
+	private static AuthenticationResult AuthResultFail(Dictionary<string, IEnumerable<string>> errors)
 	{
 		return new AuthenticationResult { Errors = errors };
 	}
 	
-	private static AuthenticationResult AuthenticationResultSuccess(Guid userId, string email)
+	private static AuthenticationResult AuthResultSuccess(Guid userId, string email)
 	{
 		return new AuthenticationResult
 		{
@@ -370,7 +358,7 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	private static AuthenticationResult AuthenticationResultSuccess(UserClaims user)
+	private static AuthenticationResult AuthResultSuccess(UserClaims user)
 	{
 		return new AuthenticationResult
 		{

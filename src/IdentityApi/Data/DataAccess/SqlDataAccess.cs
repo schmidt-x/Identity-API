@@ -21,43 +21,31 @@ public class SqlDataAccess : ISqlDataAccess
 		new SqlConnection(_connStrings.Mssql);
 	
 	
-	public async Task<IEnumerable<TResult>> LoadData<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
+	public async Task<IEnumerable<TResult>> LoadData<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.QueryAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 	
-	public async Task<TResult> LoadSingle<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
+	public async Task<TResult> LoadFirst<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.QueryFirstOrDefaultAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 	
-	public async Task<TResult> LoadScalar<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
+	public async Task<TResult> LoadScalar<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.ExecuteScalarAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 
-	public async Task SaveData(string sql, DynamicParameters parameters, CancellationToken ct)
+	public async Task SaveData(string sql, DynamicParameters parameters, CancellationToken ct = default)
 	{
 		await using var cnn = GetConnection();
 		
 		await cnn.ExecuteAsync(new CommandDefinition(sql, parameters, cancellationToken: ct));
-	}
-
-	public async Task<SqlMapper.GridReader> GetMulti(string sql, DynamicParameters parameters, CancellationToken ct)
-	{
-		await using var cnn = GetConnection();
-		
-		var res = await cnn.QueryMultipleAsync(new CommandDefinition(sql, parameters, cancellationToken: ct));
-		
-		var first = res.ReadFirst<bool>(); // TODO it throws an exception if the connection is closed
-		var second = res.ReadFirst<bool>(); 
-		
-		return res;
 	}
 }
