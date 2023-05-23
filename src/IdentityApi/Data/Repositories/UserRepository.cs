@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -22,12 +23,7 @@ public class UserRepository : IUserRepository
 	
 	public async Task<bool> ExistsAsync<T>(T arg, Column column, CancellationToken ct = default)
 	{
-		var argName = column switch
-		{
-			Column.Email => "email",
-			Column.Username => "username",
-			_ => ""
-		};
+		var argName = GetColumnName(column);
 		
 		var sql = $"""
 			SELECT IIF(exists(SELECT 1 FROM [User] WHERE {argName} = @{argName}), 1, 0)
@@ -40,7 +36,6 @@ public class UserRepository : IUserRepository
 		
 		return res;
 	}
-	
 
 	public async Task SaveAsync(User user, CancellationToken ct)
 	{
@@ -49,29 +44,43 @@ public class UserRepository : IUserRepository
 			VALUES (@id, @username, @email, @password, @createdAt, @updatedAt, @role)
 		""";
 		
-		var param = new DynamicParameters(user); // check if it works
-		
-		var parameters = new DynamicParameters(new
-		{
-			user.Id,
-			user.Username,
-			user.Email,
-			user.Password,
-			user.CreatedAt,
-			user.UpdatedAt,
-			user.Role
-		});
+		var parameters= new DynamicParameters(user);
 		
 		await _db.SaveData(sql, parameters, ct);
 	}
-
-	public Task<User?> GetByEmailAsync(string email, CancellationToken ct)
+	
+	public async Task<User?> GetAsync<T>(T arg, Column column, CancellationToken ct = default)
 	{
-		throw new NotImplementedException();
+		var argName = GetColumnName(column);
+		
+		var sql = $"""
+			SELECT id, username, email, id, username, email, password, created_at createdAt, updated_at updatedAt, role
+			FROM [User] WHERE {argName} = @{argName}
+		""";
+		
+		var parameters = new DynamicParameters();
+		parameters.Add(argName, arg);
+		
+		return await _db.LoadFirst<User>(sql, parameters, ct);
 	}
-
-	public Task<UserClaims?> GetClaimsAsync(Guid userId, CancellationToken ct)
+	
+	public async Task<string> GetEmailAsync(Guid userId, CancellationToken ct = default)
 	{
-		throw new NotImplementedException();
+		const string sql = """
+			SELECT email FROM [User] WHERE id = @userId
+		""";
+		
+		var parameters = new DynamicParameters(new { userId });
+		
+		return await _db.LoadScalar<string>(sql, parameters, ct);
 	}
+	
+	
+	private static string GetColumnName(Column column) => column switch
+	{
+		Column.Id => "id",
+		Column.Email => "email",
+		Column.Username => "username",
+		_ => ""
+	};
 }

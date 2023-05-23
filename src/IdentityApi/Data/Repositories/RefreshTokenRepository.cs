@@ -24,7 +24,6 @@ public class RefreshTokenRepository : IRefreshTokenRepository
  		""";
 		
 		var parameters = new DynamicParameters(refreshToken);
-		parameters.AddDynamicParams(refreshToken);
 		
 		await _db.SaveData(sql, parameters, ct);
 	}
@@ -36,7 +35,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
  			FROM RefreshToken WHERE id = @tokenId
  		""";
 		
-		var parameters = new DynamicParameters(new { tokenId }); // TODO is there any difference?
+		var parameters = new DynamicParameters(new { tokenId });
 		
 		return await _db.LoadFirst<RefreshToken>(sql, parameters, ct);
 	}
@@ -47,7 +46,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
  			UPDATE RefreshToken SET used = 1 WHERE id = @tokenId
  		""";
 		
-		var parameters = new DynamicParameters(tokenId);
+		var parameters = new DynamicParameters(new { tokenId });
 		
 		await _db.SaveData(sql, parameters, ct);
 	}
@@ -58,7 +57,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
  			UPDATE RefreshToken SET invalidated = 1 WHERE id = @tokenId
  		""";
  		
- 		var parameters = new DynamicParameters(tokenId);
+ 		var parameters = new DynamicParameters(new { tokenId });
  		
 		await _db.SaveData(sql, parameters, ct);
 	}
@@ -69,7 +68,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
  			UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @userId
  		""";
 		
- 		var parameters = new DynamicParameters(userId);
+ 		var parameters = new DynamicParameters(new { userId });
 		
 		await _db.SaveData(sql, parameters, ct);
 	}

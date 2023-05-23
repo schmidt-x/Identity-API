@@ -15,18 +15,20 @@ namespace IdentityApi.Controllers;
 public class AuthController : ControllerBase
 {
 	private readonly IAuthService _authService;
+	private readonly IEmailService _emailService;
 
-	public AuthController(IAuthService authService)
+	public AuthController(IAuthService authService, IEmailService emailService)
 	{
 		_authService = authService;
+		_emailService = emailService;
 	}
 	
 	
 	/// <summary>
-	/// Makes a registration session
+	/// Sends a verification code to email
 	/// </summary>
-	/// <response code="200">New session is made and the session id is retured in cookie</response>
-	/// <response code="400">Email address is already in use or validation failed</response>
+	/// <response code="200">Verification code is sent and the session id is retured in cookie</response>
+	/// <response code="400">Email address is already taken or invalid</response>
 	[HttpPost("session")]
 	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
@@ -36,6 +38,8 @@ public class AuthController : ControllerBase
 		
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
+		
+		_emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
 		
 		Response.Cookies.Append(
 			"session_id",
@@ -59,7 +63,7 @@ public class AuthController : ControllerBase
 	/// Verifies an email
 	/// </summary>
 	/// <response code="200">Email address is successfully verified</response>
-	/// <response code="400">Email verification or validation failed</response>
+	/// <response code="400">Vefirication code is wrong</response>
 	[HttpPost("verification")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
@@ -85,7 +89,7 @@ public class AuthController : ControllerBase
 	/// Registers a user
 	/// </summary>
 	/// <response code="200">User is successfully registered</response>
-	/// <response code="400">User already exists or validation failed</response>
+	/// <response code="400">Username is already taken or validation failed</response>
 	[HttpPost("registration")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
@@ -101,33 +105,22 @@ public class AuthController : ControllerBase
 			return BadRequest(new FailResponse { Errors = authenticationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
-		
-		Response.Cookies.Delete("session_id"); // should I?
-		
-		Response.Cookies.Append(
-			"jwt_refresh_token",
-			tokensResult.RefreshToken.ToString(), // should I convert it into Base64 ?
-			new()
-			{
-				HttpOnly = true,
-				Secure = true,
-				Expires = DateTimeOffset.UtcNow.AddMonths(6)
-			});
+		var tokens = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
 		
 		return Ok(new AuthSuccessResponse
 		{
 			Message = "You have successfully registered",
-			AccessToken = tokensResult.AccessToken
+			AccessToken = tokens.AccessToken,
+			RefreshToken = tokens.RefreshToken
 		});
 	}
 	
 	/// <summary>
 	/// Logs in a user
 	/// </summary>
-	/// <response code="200">User logged in</response>
+	/// <response code="200">User is logged in</response>
 	/// <response code="400">Validation failed</response>
-	/// <response code="401">User not found</response>
+	/// <response code="401">User's login/password are wrong</response>
 	[HttpPost("login")]
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
@@ -141,55 +134,42 @@ public class AuthController : ControllerBase
 			return Unauthorized(new FailResponse { Errors = authenticationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
-		
-		Response.Cookies.Delete("session_id");
-		
-		Response.Cookies.Append(
-			"jwt_refresh_token",
-			tokensResult.RefreshToken.ToString(),
-			new()
-			{
-				HttpOnly = true,
-				Secure = true,
-				Expires = DateTimeOffset.UtcNow.AddMonths(6)
-			}
-		);
+		var tokens = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
 		
 		return Ok(new AuthSuccessResponse
 		{
 			Message = "You have successfully logged in",
-			AccessToken = tokensResult.AccessToken,
+			AccessToken = tokens.AccessToken,
+			RefreshToken = tokens.RefreshToken
 		});
 	} 
 	
-	
+	/// <summary>
+	/// Refreshes the tokens
+	/// </summary>
+	/// <response code="200">Tokens are refreshed</response>
+	/// <response code="400">Tokens are missing</response>
+	/// <response code="401">Tokens are invalid</response>
 	[HttpPost("refresh")]
-	public async Task<IActionResult> RefreshToken(TokenRefreshing tokens, CancellationToken ct)
+	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
+	[ProducesResponseType(typeof(FailResponse), 400)]
+	[ProducesResponseType(typeof(FailResponse), 401)]
+	public async Task<IActionResult> RefreshToken(TokenRefreshing tokensRequest, CancellationToken ct)
 	{
-		var validationResult = await _authService.ValidateTokensAsync(tokens, ct);
+		var validationResult = await _authService.ValidateTokensAsync(tokensRequest, ct);
 		
 		if (!validationResult.Succeeded)
 		{
 			return Unauthorized(new FailResponse { Errors = validationResult.Errors });
 		}
 		
-		var tokensResult = await _authService.GenerateTokensAsync(validationResult.User, ct);
-		
-		Response.Cookies.Append(
-			"jwt_refresh_token",
-			tokensResult.RefreshToken.ToString(),
-			new()
-			{
-				HttpOnly = true,
-				Secure = true,
-				Expires = DateTimeOffset.UtcNow.AddMonths(6)
-			});
+		var tokens = await _authService.GenerateTokensAsync(validationResult.User, ct);
 		
 		return Ok(new AuthSuccessResponse
 		{
-			Message = "You have successfully refreshed tokens",
-			AccessToken = tokensResult.AccessToken
+			Message = "You have successfully refreshed the tokens",
+			AccessToken = tokens.AccessToken,
+			RefreshToken = tokens.RefreshToken
 		});
 	}
 }

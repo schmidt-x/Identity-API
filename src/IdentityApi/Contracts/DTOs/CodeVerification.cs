@@ -2,5 +2,5 @@
 
 public class CodeVerification
 {
-	public string Code { get; set; }
+	public string Code { get; set; } = default!;
 }

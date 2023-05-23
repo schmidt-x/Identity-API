@@ -29,35 +29,31 @@ public class AuthService : IAuthService
 	private readonly IRefreshTokenRepository _tokenRepo;
 	private readonly IMemoryCache _userSession;
 	private readonly JwtOptions _jwt;
-	private readonly EmailOptions _email;
 
 	public AuthService(
 		IUserRepository userRepo, 
 		IRefreshTokenRepository tokenRepo,
 		IMemoryCache userSession,
-		IOptions<JwtOptions> jwtOptions,
-		IOptions<EmailOptions> emailOptions)
+		IOptions<JwtOptions> jwtOptions)
 	{
 		_userRepo = userRepo;
 		_tokenRepo = tokenRepo;
 		_userSession = userSession;
 		_jwt = jwtOptions.Value;
-		_email = emailOptions.Value;
 	}
 	
 	
 	public async Task<SessionResult> CreateSessionAsync(string email, CancellationToken ct)
 	{
 		if (await _userRepo.ExistsAsync(email, Column.Email, ct))
+		{
 			return new SessionResult { Errors = new()
 			{
 				{ "email", new[] { $"Email address '{email}' is already taken" } }
 			}};
+		}
 		
 		string verificationCode = GenerateVerificationCode();
-		
-		// SendEmail(email, verificationCode);
-		Console.WriteLine(verificationCode);
 		
 		var sessionId = Guid.NewGuid().ToString();
 		var session = new UserSession
@@ -71,7 +67,8 @@ public class AuthService : IAuthService
 		return new SessionResult
 		{
 			Succeeded = true,
-			Id = sessionId
+			Id = sessionId,
+			VerificationCode = verificationCode
 		};
 	}
 	
@@ -128,10 +125,10 @@ public class AuthService : IAuthService
 			return AuthResultFail("email", "Email address is not verified");
 		}
 		
-		// if (await _userRepo.ExistsAsync(userRegistration.Username, Column.Username, ct))
-		// {
-		// 	return AuthResultFail("username", $"Username '{userRegistration.Username}' is already taken");
-		// }
+		if (await _userRepo.ExistsAsync(userRegistration.Username, Column.Username, ct))
+		{
+			return AuthResultFail("username", $"Username '{userRegistration.Username}' is already taken");
+		}
 		
 		var timeNow = DateTime.UtcNow;
 		var user = new User
@@ -149,9 +146,18 @@ public class AuthService : IAuthService
 		{
 			await _userRepo.SaveAsync(user, ct);
 		}
-		catch(SqlException ex) when (ex.Number == 2627)
+		catch(SqlException ex) when (ex.Number == 2627) // in order if 'Race condition' occurs
 		{
-			return AuthResultFail(GetSqlUQConstraintMessage(ex));
+			var error = GetSqlUQConstraintMessage(ex);
+
+			error.value = error.key switch
+			{
+				"username" => string.Format(error.value, user.Username),
+				"email" => string.Format(error.value, user.Email),
+				_ => error.value
+			};
+
+			return AuthResultFail(error.key, error.value);
 		}
 		
 		return AuthResultSuccess(user.Id, user.Email);
@@ -202,7 +208,7 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userLogin, CancellationToken ct)
 	{
-		var user = await _userRepo.GetByEmailAsync(userLogin.Email, ct);
+		var user = await _userRepo.GetAsync(userLogin.Email, Column.Email, ct);
 		
 		if (user == null || !Bcrypt.Verify(userLogin.Password, user.Password))
 		{
@@ -214,7 +220,7 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshing tokens, CancellationToken ct)
 	{
-		if (!Guid.TryParse(tokens.RefreshToken, out var refreshToken))
+		if (!Guid.TryParse(tokens.RefreshToken, out var refreshTokenId))
 		{
 			return AuthResultFail("RefreshToken", "Invalid refresh token");
 		}
@@ -237,39 +243,37 @@ public class AuthService : IAuthService
 			return AuthResultFail("AccessToken", "Invalid access token");
 		}
 		
-		var storedRefreshToken = await _tokenRepo.GetAsync(refreshToken, ct);
+		var refreshToken = await _tokenRepo.GetAsync(refreshTokenId, ct);
 		
-		if (storedRefreshToken == null)
+		if (refreshToken == null)
 		{
 			return AuthResultFail("RefreshToken", "Refresh token does not exist");
 		}
 		
-		if (storedRefreshToken.Invalidated)
+		if (refreshToken.Invalidated)
 		{
 			return AuthResultFail("RefreshToken", "Refresh token is invalidated");
 		}
 		
-		if (storedRefreshToken.Used)
+		if (refreshToken.Used)
 		{
 			return AuthResultFail("RefreshToken", "Refresh token has already been used");
 		}
 		
-		if (storedRefreshToken.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+		if (refreshToken.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
 		{
 			return AuthResultFail("RefreshToken", "Refresh token has been expired");
 		}
 		
-		if (storedRefreshToken.Jti != validatedToken!.Id)
+		if (refreshToken.Jti != validatedToken!.Id)
 		{
 			return AuthResultFail("AccessToken", "Tokens do not match");
 		}
 		
-		await _tokenRepo.SetUsedAsync(refreshToken, ct);
+		await _tokenRepo.SetUsedAsync(refreshTokenId, ct);
+		var emailAddress = await _userRepo.GetEmailAsync(refreshToken.UserId, ct);
 		
-		var user = await _userRepo.GetClaimsAsync(storedRefreshToken.UserId, ct);
-		// TODO Should I handle user == null? Is it possible?
-		
-		return AuthResultSuccess(user!);
+		return AuthResultSuccess(refreshToken.UserId, emailAddress);
 	}
 	
 	
@@ -283,28 +287,7 @@ public class AuthService : IAuthService
 			.ToArray());
 	}
 	
-	private void SendEmail(string emailTo, string message)
-	{
-		using var emailMessage = new MailMessage
-		{
-			From = new(_email.Address, "IdentityApi"),
-			To = { new(emailTo) },
-			Subject = "Email verification",
-			Body = message,
-		};
-		
-		var smtpClient = new SmtpClient("smtp.gmail.com", 587)
-		{
-			EnableSsl = true,
-			DeliveryMethod = SmtpDeliveryMethod.Network,
-			UseDefaultCredentials = false,
-			Credentials = new NetworkCredential(emailMessage.From.Address, _email.Password)
-		};
-		
-		smtpClient.Send(emailMessage);
-	}
-	
-	private static Dictionary<string, IEnumerable<string>> GetSqlUQConstraintMessage(SqlException ex) // TODO add actual username
+	private static (string key, string value) GetSqlUQConstraintMessage(SqlException ex)
 	{
 		var message = ex.Message;
 		const int startIndex = 36;
@@ -322,12 +305,12 @@ public class AuthService : IAuthService
 		
 		var value = key switch
 		{
-			"email" => "Email address is already taken",
-			"username" => "Username is already taken",
-			_ => string.Empty, // TODO What should I do here?
+			"email" => "Email address '{0}' is already taken",
+			"username" => "Username '{0}' is already taken",
+			_ => string.Empty 
 		};
 		
-		return new() { { key, new[] { value } } };
+		return (key, value);
 	}
 	
 	

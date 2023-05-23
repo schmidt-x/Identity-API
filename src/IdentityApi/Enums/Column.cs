@@ -2,6 +2,7 @@
 
 public enum Column
 {
+	Id,
 	Username,
 	Email
 }
