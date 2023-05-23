@@ -47,26 +47,4 @@ public static class ServiceCollectionExtentions
 			.AddScoped<SessionCookieActionFilter>()
 			.AddScoped<ValidationActionFilter>();
 	}
-	
-	
-	// public static IServiceCollection SetIdentityConfiguration(this IServiceCollection services, IConfiguration config)
-	// {
-		// services.AddSingleton(new JwtConfig
-		// {
-			// SecretKey = secretKey,
-			// Audience = audience,
-			// Issuer = issuer,
-			// Parameters = new()
-			// {
-				// ValidIssuer = issuer,
-				// ValidAudience = audience,
-				// IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-				// ValidateIssuer = true,
-				// ValidateAudience = true,
-				// ValidateIssuerSigningKey = true,
-				// ValidateLifetime = false
-			// }
-		// });
-		// return services;
-	// }
 }

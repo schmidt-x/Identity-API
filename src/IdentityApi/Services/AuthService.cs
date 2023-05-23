@@ -227,7 +227,7 @@ public class AuthService : IAuthService
 		
 		var tokenHandler = new JwtSecurityTokenHandler();
 		
-		var parameters = new TokenValidationParameters // TODO 
+		var parameters = new TokenValidationParameters // TODO into DI
 		{
 			ValidIssuer = _jwt.Issuer,
 			ValidAudience = _jwt.Audience,
@@ -279,7 +279,7 @@ public class AuthService : IAuthService
 	
 	private static string GenerateVerificationCode()
 	{
-		const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+		const string chars = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
 		
 		return new string(Enumerable
 			.Repeat(chars, 6)

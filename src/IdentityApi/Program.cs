@@ -23,7 +23,9 @@ public class Program
 		builder.Services.AddDataAccess();
 		builder.Services.AddServices();
 		builder.Services.AddValidation();
-		builder.AddOptions();
+		
+		builder.SetOptions();
+		builder.SetMigrations();
 		
 		builder.Services.AddFluentValidationAutoValidation();
 		builder.Services.AddHttpContextAccessor();
@@ -49,6 +51,8 @@ public class Program
 		app.UseExceptionHandlerMiddleware();
 		app.UseSwagger();
 		app.UseSwaggerUI();
+		
+		app.RunMigrations();
 		
 		// Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 		

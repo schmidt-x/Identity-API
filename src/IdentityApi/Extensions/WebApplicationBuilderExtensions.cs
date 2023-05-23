@@ -6,7 +6,7 @@ namespace IdentityApi.Extensions;
 
 public static class WebApplicationBuilderExtensions 
 {
-	public static WebApplicationBuilder AddOptions(this WebApplicationBuilder builder)
+	public static WebApplicationBuilder SetOptions(this WebApplicationBuilder builder)
 	{
 		builder.Services.Configure<ConnectionStringsOptions>(
 			builder.Configuration.GetSection(ConnectionStringsOptions.ConnectionStrings));
