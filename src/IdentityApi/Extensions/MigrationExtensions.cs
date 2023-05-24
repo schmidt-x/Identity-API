@@ -8,7 +8,7 @@ namespace IdentityApi.Extensions;
 
 public static class MigrationExtensions
 {
-	public static WebApplicationBuilder SetMigrations(this WebApplicationBuilder builder)
+	public static WebApplicationBuilder AddFluentMigrator(this WebApplicationBuilder builder)
 	{
 		builder.Services
 			.AddFluentMigratorCore()

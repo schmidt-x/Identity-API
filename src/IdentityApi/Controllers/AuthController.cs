@@ -107,6 +107,8 @@ public class AuthController : ControllerBase
 		
 		var tokens = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
 		
+		Response.Cookies.Delete("session_id");
+		
 		return Ok(new AuthSuccessResponse
 		{
 			Message = "You have successfully registered",

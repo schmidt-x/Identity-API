@@ -47,7 +47,7 @@ public class ExceptionHandlerMiddleware
 			case SecurityException sEx: 
 				_logger.LogWarning(sEx, sEx.Message);
 				response.StatusCode = 401;
-				errorMessage = "Go fuck yourself"; // TODO
+				errorMessage = "Invalid session ID"; 
 				break;
 				
 			default:

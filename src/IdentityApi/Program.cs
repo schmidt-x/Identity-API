@@ -22,10 +22,10 @@ public class Program
 		builder.Services.AddRepositories();
 		builder.Services.AddDataAccess();
 		builder.Services.AddServices();
-		builder.Services.AddValidation();
+		builder.Services.AddFluentValidators();
 		
 		builder.SetOptions();
-		builder.SetMigrations();
+		builder.AddFluentMigrator();
 		
 		builder.Services.AddFluentValidationAutoValidation();
 		builder.Services.AddHttpContextAccessor();

@@ -11,7 +11,7 @@ namespace IdentityApi.Extensions;
 
 public static class ServiceCollectionExtentions
 {
-	public static IServiceCollection AddValidation(this IServiceCollection services)
+	public static IServiceCollection AddFluentValidators(this IServiceCollection services)
 	{
 		return services
 			.AddScoped<IValidator<UserRegistration>, UserRegisterValidator>()
