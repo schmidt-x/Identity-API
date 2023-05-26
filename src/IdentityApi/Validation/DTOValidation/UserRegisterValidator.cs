@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.DTOs;
 
-namespace IdentityApi.Validation;
+namespace IdentityApi.Validation.DTOValidation;
 
 public class UserRegisterValidator : AbstractValidator<UserRegistration>
 {
@@ -21,7 +21,7 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 	{
 		if (string.IsNullOrWhiteSpace(username))
 		{
-			context.AddFailure("Username required");
+			context.AddFailure("Username is required");
 			return;
 		}
 
@@ -32,12 +32,12 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 	{
 		if (string.IsNullOrWhiteSpace(confirmPassword))
 		{
-			context.AddFailure("Password confirmation required");
+			context.AddFailure("Password confirmation is required");
 			return;
 		}
 
 		if (confirmPassword != context.InstanceToValidate.Password)
-			context.AddFailure("Passwords not match");
+			context.AddFailure("Passwords do not match");
 	}
 	private static void ValidatePassword(string? password, ValidationContext<UserRegistration> context)
 	{

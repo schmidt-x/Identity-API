@@ -1,21 +1,32 @@
 ﻿using IdentityApi.Contracts.Options;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IdentityApi.Extensions;
 
 public static class WebApplicationBuilderExtensions 
 {
-	public static WebApplicationBuilder SetOptions(this WebApplicationBuilder builder)
+	public static WebApplicationBuilder SetConnectionStringsOptions(this WebApplicationBuilder builder)
 	{
-		builder.Services.Configure<ConnectionStringsOptions>(
-			builder.Configuration.GetSection(ConnectionStringsOptions.ConnectionStrings));
+		builder.Services
+			.AddOptions<ConnectionStringsOptions>()
+			.Bind(builder.Configuration.GetRequiredSection(ConnectionStringsOptions.ConnectionStrings))
+			.Validate(o => !string.IsNullOrEmpty(o.Mssql), "Connection string is required")
+			.ValidateOnStart();
 		
-		builder.Services.Configure<JwtOptions>(
-			builder.Configuration.GetSection(JwtOptions.Jwt));
-		
-		builder.Services.Configure<EmailOptions>(
-			builder.Configuration.GetSection(EmailOptions.Email));
+		return builder;
+	}
+	
+	public static WebApplicationBuilder SetEmailOptions(this WebApplicationBuilder builder)
+	{
+		builder.Services
+			.AddOptions<EmailOptions>()
+			.Bind(builder.Configuration.GetRequiredSection(EmailOptions.Email))
+			// .ValidateDataAnnotations()
+			.Validate(o => !string.IsNullOrEmpty(o.Address), "Email address is required")
+			.Validate(o => !string.IsNullOrEmpty(o.Password), "Email password is required")
+			.ValidateOnStart();
 		
 		return builder;
 	}

@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.DTOs;
 
-namespace IdentityApi.Validation;
+namespace IdentityApi.Validation.DTOValidation;
 
 public class TokenRefreshingValidator : AbstractValidator<TokenRefreshing>
 {

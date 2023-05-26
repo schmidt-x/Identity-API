@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace IdentityApi.Extensions;
+namespace IdentityApi.Installers;
 
-public static class MigrationExtensions
+public static class MigrationInstaller
 {
 	public static WebApplicationBuilder AddFluentMigrator(this WebApplicationBuilder builder)
 	{
