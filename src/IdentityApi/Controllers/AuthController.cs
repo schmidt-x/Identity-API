@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IdentityApi.Controllers;
 
 [Produces("application/json")]
-[ServiceFilter(typeof(ValidationActionFilter))]
+[ServiceFilter(typeof(ModerlStateErrorsHandlerActionFilter))]
 [ApiController, Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
@@ -39,7 +39,8 @@ public class AuthController : ControllerBase
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		_emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
+		// _emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
+		Console.WriteLine(sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
 			"session_id",
@@ -57,7 +58,6 @@ public class AuthController : ControllerBase
 			Message = "Verification code is sent to your email"
 		});
 	}
-	
 	
 	/// <summary>
 	/// Verifies an email

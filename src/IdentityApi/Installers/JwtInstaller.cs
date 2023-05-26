@@ -43,6 +43,39 @@ public static class JwtInstaller
 		
 		builder.Services.AddSingleton(validationParameters);
 		
+		builder.Services
+			.AddAuthentication(o =>
+			{
+				o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+				o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+				o.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+			})
+			.AddJwtBearer(b =>
+			{
+				b.TokenValidationParameters = validationParameters;
+				b.MapInboundClaims = false;
+				b.Events = new()
+				{
+					// Since the 'role' claim is not stored inside the Jwt token,
+					// we need to retrieve it from the db and add it to the request claims.
+					// This additional security measure ensures that the 'role' claim is retrieved dynamically
+					
+					OnTokenValidated = async tvc =>
+					{
+						var ctx = tvc.HttpContext;
+						var user = tvc.Principal!;
+						
+						var userId = Guid.Parse(user.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+						var userRepo = ctx.RequestServices.GetRequiredService<IUserRepository>();
+						
+						var userRole = await userRepo.GetRoleAsync(userId);
+						
+						var claims = user.Claims.Append(new Claim("role", userRole));
+						var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
+						tvc.Principal = new ClaimsPrincipal(identity);
+					}
+				};
+			});
 		
 		return builder;
 	}

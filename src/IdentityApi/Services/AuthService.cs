@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Net;
-using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
 using System.Threading;
@@ -12,10 +10,9 @@ using System.Threading.Tasks;
 using IdentityApi.Contracts.DTOs;
 using IdentityApi.Contracts.Options;
 using IdentityApi.Data.Repositories;
-using IdentityApi.Enums;
-using IdentityApi.Extensions;
 using IdentityApi.Models;
 using IdentityApi.Results;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -28,24 +25,27 @@ public class AuthService : IAuthService
 	private readonly IUserRepository _userRepo;
 	private readonly IRefreshTokenRepository _tokenRepo;
 	private readonly IMemoryCache _userSession;
+	private readonly TokenValidationParameters _tokenValidationParameters;
 	private readonly JwtOptions _jwt;
 
 	public AuthService(
 		IUserRepository userRepo, 
 		IRefreshTokenRepository tokenRepo,
 		IMemoryCache userSession,
-		IOptions<JwtOptions> jwtOptions)
+		IOptions<JwtOptions> jwtOptions,
+		TokenValidationParameters tokenValidationParameters)
 	{
 		_userRepo = userRepo;
 		_tokenRepo = tokenRepo;
 		_userSession = userSession;
+		_tokenValidationParameters = tokenValidationParameters;
 		_jwt = jwtOptions.Value;
 	}
 	
 	
 	public async Task<SessionResult> CreateSessionAsync(string email, CancellationToken ct)
 	{
-		if (await _userRepo.ExistsAsync(email, Column.Email, ct))
+		if (await _userRepo.EmailExistsAsync(email, ct))
 		{
 			return new SessionResult { Errors = new()
 			{
@@ -125,7 +125,7 @@ public class AuthService : IAuthService
 			return AuthResultFail("email", "Email address is not verified");
 		}
 		
-		if (await _userRepo.ExistsAsync(userRegistration.Username, Column.Username, ct))
+		if (await _userRepo.UsernameExistsAsync(userRegistration.Username, ct))
 		{
 			return AuthResultFail("username", $"Username '{userRegistration.Username}' is already taken");
 		}
@@ -135,7 +135,7 @@ public class AuthService : IAuthService
 		{
 			Id = Guid.NewGuid(),
 			Username = userRegistration.Username,
-			Password = Bcrypt.HashPassword(userRegistration.Password, Bcrypt.GenerateSalt()),
+			Password = Bcrypt.HashPassword(userRegistration.Password, Bcrypt.GenerateSalt()), // TODO into new interface
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
@@ -171,17 +171,17 @@ public class AuthService : IAuthService
 		
 		var identity = new ClaimsIdentity(new[]
 		{
-			new Claim("jti", Guid.NewGuid().ToString()),
-			new Claim("id", user.Id.ToString()),
-			new Claim("email", user.Email)
-		}, "Bearer");
+			new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+			new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+			new Claim(JwtRegisteredClaimNames.Email, user.Email)
+		}, JwtBearerDefaults.AuthenticationScheme);
 		
 		var descriptor = new SecurityTokenDescriptor
 		{
 			Subject = identity,
 			Audience = _jwt.Audience,
 			Issuer = _jwt.Issuer,
-			Expires = DateTime.UtcNow.AddMinutes(5),
+			Expires = DateTime.UtcNow.Add(_jwt.AccessTokenLifeTime),
 			SigningCredentials = credentials
 		};
 		
@@ -193,8 +193,10 @@ public class AuthService : IAuthService
 			Id = Guid.NewGuid(),
 			Jti = securityToken.Id,
 			CreatedAt = timeNow.ToUnixTimeSeconds(),
-			ExpiresAt = timeNow.AddMonths(6).ToUnixTimeMilliseconds(),
+			ExpiresAt = timeNow.Add(_jwt.RefreshTokenLifeTime).ToUnixTimeSeconds(),
 			UserId = user.Id,
+			Invalidated = false,
+			Used = false
 		};
 		
 		await _tokenRepo.SaveAsync(refreshToken, ct);
@@ -208,11 +210,11 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userLogin, CancellationToken ct)
 	{
-		var user = await _userRepo.GetAsync(userLogin.Email, Column.Email, ct);
+		var user = await _userRepo.GetAsync(userLogin.Email, ct);
 		
 		if (user == null || !Bcrypt.Verify(userLogin.Password, user.Password))
 		{
-			return AuthResultFail("User", "Incorrect login/password");
+			return AuthResultFail("user", "Incorrect login/password");
 		}
 		
 		return AuthResultSuccess(user.Id, user.Email);
@@ -222,58 +224,47 @@ public class AuthService : IAuthService
 	{
 		if (!Guid.TryParse(tokens.RefreshToken, out var refreshTokenId))
 		{
-			return AuthResultFail("RefreshToken", "Invalid refresh token");
+			return AuthResultFail("refreshToken", "Invalid refresh token");
 		}
 		
-		var tokenHandler = new JwtSecurityTokenHandler();
+		var user = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
 		
-		var parameters = new TokenValidationParameters // TODO into DI
+		if (user == null)
 		{
-			ValidIssuer = _jwt.Issuer,
-			ValidAudience = _jwt.Audience,
-			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey)),
-			ValidateIssuer = true,
-			ValidateAudience = true,
-			ValidateIssuerSigningKey = true,
-			ValidateLifetime = false
-		};
-		
-		if (!tokenHandler.TryValidate(tokens.AccessToken, parameters, out var validatedToken))
-		{
-			return AuthResultFail("AccessToken", "Invalid access token");
+			return AuthResultFail("accessToken", "Invalid access token");
 		}
 		
 		var refreshToken = await _tokenRepo.GetAsync(refreshTokenId, ct);
 		
 		if (refreshToken == null)
 		{
-			return AuthResultFail("RefreshToken", "Refresh token does not exist");
+			return AuthResultFail("refreshToken", "Invalid refresh token"); // TODO 
 		}
 		
 		if (refreshToken.Invalidated)
 		{
-			return AuthResultFail("RefreshToken", "Refresh token is invalidated");
+			return AuthResultFail("refreshToken", "Refresh token is invalidated");
 		}
 		
 		if (refreshToken.Used)
 		{
-			return AuthResultFail("RefreshToken", "Refresh token has already been used");
+			return AuthResultFail("refreshToken", "Refresh token has already been used");
 		}
 		
 		if (refreshToken.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
 		{
-			return AuthResultFail("RefreshToken", "Refresh token has been expired");
+			return AuthResultFail("refreshToken", "Refresh token has been expired");
 		}
 		
-		if (refreshToken.Jti != validatedToken!.Id)
+		if (refreshToken.Jti != securityToken!.Id)
 		{
-			return AuthResultFail("AccessToken", "Tokens do not match");
+			return AuthResultFail("accessToken", "Tokens do not match");
 		}
 		
 		await _tokenRepo.SetUsedAsync(refreshTokenId, ct);
-		var emailAddress = await _userRepo.GetEmailAsync(refreshToken.UserId, ct);
+		var email = user.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
 		
-		return AuthResultSuccess(refreshToken.UserId, emailAddress);
+		return AuthResultSuccess(refreshToken.UserId, email);
 	}
 	
 	
@@ -313,6 +304,39 @@ public class AuthService : IAuthService
 		return (key, value);
 	}
 	
+	private ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out SecurityToken? securityToken)
+	{
+		var handler = new JwtSecurityTokenHandler();
+		securityToken = default;
+		
+		try
+		{
+			_tokenValidationParameters.ValidateLifetime = false;
+			var claimsPrincipal = handler.ValidateToken(token, _tokenValidationParameters, out var secToken);
+			
+			if (!IsValidSecurityAlgorithm(secToken))
+				return null;
+			
+			securityToken = secToken;
+			return claimsPrincipal;
+		}
+		catch
+		{
+			return null;
+		}
+		finally
+		{
+			_tokenValidationParameters.ValidateLifetime = true;
+		}
+	}
+	
+	private static bool IsValidSecurityAlgorithm(SecurityToken token)
+	{
+		return token is JwtSecurityToken jwtSecToken
+			&& jwtSecToken.Header.Alg.Equals(
+			SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
+	}
+	
 	
 	private static AuthenticationResult AuthResultFail(string key, params string[] errors)
 	{
@@ -322,12 +346,6 @@ public class AuthService : IAuthService
 			Errors = new() { { key, errors } } 
 		};
 	}
-	
-	private static AuthenticationResult AuthResultFail(Dictionary<string, IEnumerable<string>> errors)
-	{
-		return new AuthenticationResult { Errors = errors };
-	}
-	
 	private static AuthenticationResult AuthResultSuccess(Guid userId, string email)
 	{
 		return new AuthenticationResult
@@ -338,15 +356,6 @@ public class AuthService : IAuthService
 				Id = userId,
 				Email = email
 			}
-		};
-	}
-	
-	private static AuthenticationResult AuthResultSuccess(UserClaims user)
-	{
-		return new AuthenticationResult
-		{
-			Succeeded = true,
-			User = user,
 		};
 	}
 }

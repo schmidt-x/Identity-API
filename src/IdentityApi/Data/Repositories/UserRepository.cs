@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using IdentityApi.Data.DataAccess;
-using IdentityApi.Enums;
 using IdentityApi.Models;
-using IdentityApi.Results;
 
 namespace IdentityApi.Data.Repositories;
 
@@ -21,20 +17,26 @@ public class UserRepository : IUserRepository
 	}
 	
 	
-	public async Task<bool> ExistsAsync<T>(T arg, Column column, CancellationToken ct = default)
+	public async Task<bool> EmailExistsAsync(string email, CancellationToken ct = default)
 	{
-		var argName = GetColumnName(column);
-		
-		var sql = $"""
-			SELECT IIF(exists(SELECT 1 FROM [User] WHERE {argName} = @{argName}), 1, 0)
+		const string sql = """
+			SELECT IIF(exists(SELECT 1 FROM [User] WHERE email = @email), 1, 0)
 		""";
 		
-		var parameters = new DynamicParameters();
-		parameters.Add(argName, arg);
+		var parameters = new DynamicParameters(new { email });
 		
-		var res = await _db.LoadScalar<bool>(sql, parameters, ct);
+		return await _db.LoadScalar<bool>(sql, parameters, ct);
+	}
+	
+	public async Task<bool> UsernameExistsAsync(string username, CancellationToken ct = default)
+	{
+		const string sql = """
+			SELECT IIF(exists(SELECT 1 FROM [User] WHERE username = @username), 1, 0)
+		""";
 		
-		return res;
+		var parameters = new DynamicParameters(new { username });
+		
+		return await _db.LoadScalar<bool>(sql, parameters, ct);
 	}
 
 	public async Task SaveAsync(User user, CancellationToken ct)
@@ -49,38 +51,38 @@ public class UserRepository : IUserRepository
 		await _db.SaveData(sql, parameters, ct);
 	}
 	
-	public async Task<User?> GetAsync<T>(T arg, Column column, CancellationToken ct = default)
-	{
-		var argName = GetColumnName(column);
-		
-		var sql = $"""
-			SELECT id, username, email, id, username, email, password, created_at createdAt, updated_at updatedAt, role
-			FROM [User] WHERE {argName} = @{argName}
-		""";
-		
-		var parameters = new DynamicParameters();
-		parameters.Add(argName, arg);
-		
-		return await _db.LoadFirst<User>(sql, parameters, ct);
-	}
-	
-	public async Task<string> GetEmailAsync(Guid userId, CancellationToken ct = default)
+	public async Task<User?> GetAsync(string email, CancellationToken ct = default)
 	{
 		const string sql = """
-			SELECT email FROM [User] WHERE id = @userId
+			SELECT id, username, email, id, username, email, password, created_at createdAt, updated_at updatedAt, role
+			FROM [User] WHERE email = @email
 		""";
 		
-		var parameters = new DynamicParameters(new { userId });
+		var parameters = new DynamicParameters(new { email });
+		
+		return await _db.LoadSingle<User>(sql, parameters, ct);
+	}
+	
+	public async Task<User?> GetAsync(Guid id, CancellationToken ct = default)
+	{
+		const string sql = """
+			SELECT id, username, email, id, username, email, password, created_at createdAt, updated_at updatedAt, role
+			FROM [User] WHERE id = @id
+		""";
+		
+		var parameters = new DynamicParameters(new { id });
+		
+		return await _db.LoadSingle<User>(sql, parameters, ct);
+	}
+
+	public async Task<string> GetRoleAsync(Guid id, CancellationToken ct = default)
+	{
+		const string sql = """
+			SELECT role FROM [User] WHERE id = @id
+		""";
+		
+		var parameters = new DynamicParameters(new { id });
 		
 		return await _db.LoadScalar<string>(sql, parameters, ct);
 	}
-	
-	
-	private static string GetColumnName(Column column) => column switch
-	{
-		Column.Id => "id",
-		Column.Email => "email",
-		Column.Username => "username",
-		_ => ""
-	};
 }

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace IdentityApi.Filters;
 
-public class ValidationActionFilter : IAsyncActionFilter
+public class ModerlStateErrorsHandlerActionFilter : IAsyncActionFilter
 {
 	public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
 	{
