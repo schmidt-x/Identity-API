@@ -23,7 +23,6 @@ public static class WebApplicationBuilderExtensions
 		builder.Services
 			.AddOptions<EmailOptions>()
 			.Bind(builder.Configuration.GetRequiredSection(EmailOptions.Email))
-			// .ValidateDataAnnotations()
 			.Validate(o => !string.IsNullOrEmpty(o.Address), "Email address is required")
 			.Validate(o => !string.IsNullOrEmpty(o.Password), "Email password is required")
 			.ValidateOnStart();

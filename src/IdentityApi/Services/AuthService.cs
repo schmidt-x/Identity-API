@@ -210,7 +210,7 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userLogin, CancellationToken ct)
 	{
-		var user = await _userRepo.GetAsync(userLogin.Email, ct);
+		var user = await _userRepo.GetAsync(userLogin.Login, ct);
 		
 		if (user == null || !Bcrypt.Verify(userLogin.Password, user.Password))
 		{
@@ -262,7 +262,7 @@ public class AuthService : IAuthService
 		}
 		
 		await _tokenRepo.SetUsedAsync(refreshTokenId, ct);
-		var email = user.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+		var email = user.Claims.Single(x => x.Type == ClaimTypes.Email).Value;
 		
 		return AuthResultSuccess(refreshToken.UserId, email);
 	}

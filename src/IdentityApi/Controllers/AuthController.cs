@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityApi.Controllers;
 
+[Consumes("application/json")]
 [Produces("application/json")]
-[ServiceFilter(typeof(ModerlStateErrorsHandlerActionFilter))]
 [ApiController, Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
@@ -39,8 +39,7 @@ public class AuthController : ControllerBase
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		// _emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
-		Console.WriteLine(sessionResult.VerificationCode);
+		_emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
 		
 		Response.Cookies.Append(
 			"session_id",

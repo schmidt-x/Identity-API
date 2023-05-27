@@ -1,12 +1,15 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Threading;
+using System.Text.RegularExpressions;
 using FluentValidation.AspNetCore;
 using IdentityApi.Extensions;
+using IdentityApi.Filters;
 using IdentityApi.Installers;
+using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
@@ -25,28 +28,37 @@ public class Program
 		builder.Services.AddRepositories();
 		builder.Services.AddDataAccess();
 		builder.Services.AddServices();
-		builder.Services.AddValidators();
 		
 		builder.AddJwtAuthentication();
 		builder.Services.AddAuthorizationWithPolicies();
 		
 		builder.AddFluentMigrator();
+		
 		builder.SetConnectionStringsOptions();
 		builder.SetEmailOptions();
 		
-		builder.Services.AddFluentValidationAutoValidation();
+		builder.Services
+			.AddValidators()
+			.AddFluentValidationAutoValidation();
+		
 		builder.Services.AddHttpContextAccessor();
 		
-		builder.Services.AddControllers(options =>
-		{
-			options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
-		}).ConfigureApiBehaviorOptions(options => options.SuppressModelStateInvalidFilter = true);
+		builder.Services
+			.AddControllers(options =>
+			{
+				options.Filters.Add(typeof(ModerlStateErrorsHandlerActionFilter));
+				options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+			})
+			.ConfigureApiBehaviorOptions(options => 
+				options.SuppressModelStateInvalidFilter = true);
 		
-		builder.Services.AddSwaggerGen(o =>
-		{
-			var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-			o.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
-		});
+		builder.Services
+			.AddSwaggerGen(o =>
+			{
+				var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+				o.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
+			})
+			.AddFluentValidationRulesToSwagger();
 		
 		builder.Services.AddMemoryCache();
 		
