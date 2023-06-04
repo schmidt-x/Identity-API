@@ -52,7 +52,8 @@ public static class ServiceCollectionExtentions
 	{
 		return services
 			.AddScoped<IAuthService, AuthService>()
-			.AddScoped<IEmailService, EmailService>();
+			.AddScoped<IEmailService, EmailService>()
+			.AddScoped<IPasswordService, PasswordService>();
 	}
 	
 	public static IServiceCollection AddFilters(this IServiceCollection services)

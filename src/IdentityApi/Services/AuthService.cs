@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
@@ -27,19 +26,22 @@ public class AuthService : IAuthService
 	private readonly IMemoryCache _userSession;
 	private readonly TokenValidationParameters _tokenValidationParameters;
 	private readonly JwtOptions _jwt;
+	private readonly IPasswordService _passwordService;
 
 	public AuthService(
 		IUserRepository userRepo, 
 		IRefreshTokenRepository tokenRepo,
 		IMemoryCache userSession,
 		IOptions<JwtOptions> jwtOptions,
-		TokenValidationParameters tokenValidationParameters)
+		TokenValidationParameters tokenValidationParameters,
+		IPasswordService passwordService)
 	{
 		_userRepo = userRepo;
 		_tokenRepo = tokenRepo;
 		_userSession = userSession;
 		_tokenValidationParameters = tokenValidationParameters;
 		_jwt = jwtOptions.Value;
+		_passwordService = passwordService;
 	}
 	
 	
@@ -135,7 +137,7 @@ public class AuthService : IAuthService
 		{
 			Id = Guid.NewGuid(),
 			Username = userRegistration.Username,
-			Password = Bcrypt.HashPassword(userRegistration.Password, Bcrypt.GenerateSalt()), // TODO into new interface
+			Password = _passwordService.HashPassword(userRegistration.Password),
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
@@ -146,7 +148,7 @@ public class AuthService : IAuthService
 		{
 			await _userRepo.SaveAsync(user, ct);
 		}
-		catch(SqlException ex) when (ex.Number == 2627) // in order if 'Race condition' occurs
+		catch(SqlException ex) when (ex.Number == 2627) // in case if 'Race condition' occurs
 		{
 			var error = GetSqlUQConstraintMessage(ex);
 
@@ -212,7 +214,7 @@ public class AuthService : IAuthService
 	{
 		var user = await _userRepo.GetAsync(userLogin.Login, ct);
 		
-		if (user == null || !Bcrypt.Verify(userLogin.Password, user.Password))
+		if (user == null || !_passwordService.VerifyPassword(userLogin.Password, user.Password))
 		{
 			return AuthResultFail("user", "Incorrect login/password");
 		}
