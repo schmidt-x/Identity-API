@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using IdentityApi.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityApi.Middleware;
 
@@ -48,6 +49,12 @@ public class ExceptionHandlerMiddleware
 				_logger.LogWarning(sEx, sEx.Message);
 				response.StatusCode = 401;
 				errorMessage = "Invalid session ID"; 
+				break;
+				
+			case SecurityTokenException stEx:
+				_logger.LogWarning(stEx, stEx.Message);
+				response.StatusCode = 401;
+				errorMessage = "Invalid Jwt access token";
 				break;
 				
 			default:

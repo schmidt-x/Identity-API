@@ -35,7 +35,7 @@ public class SqlDataAccess : ISqlDataAccess
 		return await cnn.QuerySingleOrDefaultAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 	
-	public async Task<TResult> LoadScalar<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	public async Task<TResult?> LoadScalar<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
 	{
 		await using var cnn = GetConnection();
 		

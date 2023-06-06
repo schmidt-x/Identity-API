@@ -16,60 +16,51 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		_db = db;
 	}
 
-	public async Task SaveAsync(RefreshToken refreshToken, CancellationToken ct)
+	public Task SaveAsync(RefreshToken refreshToken, CancellationToken ct)
 	{
-		var sql = """
+		const string sql = """
  			INSERT INTO RefreshToken (id, jti, created_at, expires_at, used, invalidated, user_id) 
  			VALUES (@id, @jti, @createdAt, @expiresAt, @used, @invalidated, @userId)
  		""";
 		
 		var parameters = new DynamicParameters(refreshToken);
 		
-		await _db.SaveData(sql, parameters, ct);
+		return _db.SaveData(sql, parameters, ct);
 	}
 
-	public async Task<RefreshToken?> GetAsync(Guid tokenId, CancellationToken ct)
+	public Task<RefreshToken?> GetAsync(Guid tokenId, CancellationToken ct)
 	{
-		var sql = """
- 			SELECT id, jti, created_at createdAt, expires_at expiresAt, used, invalidated, user_id userId
- 			FROM RefreshToken WHERE id = @tokenId
- 		""";
+		const string sql = "SELECT * FROM RefreshToken WHERE id = @tokenId";
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		return await _db.LoadSingle<RefreshToken>(sql, parameters, ct);
+		return _db.LoadSingle<RefreshToken>(sql, parameters, ct);
 	}
 
-	public async Task SetUsedAsync(Guid tokenId, CancellationToken ct)
+	public Task SetUsedAsync(Guid tokenId, CancellationToken ct)
 	{
-		var sql = """
- 			UPDATE RefreshToken SET used = 1 WHERE id = @tokenId
- 		""";
+		const string sql = "UPDATE RefreshToken SET used = 1 WHERE id = @tokenId";
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		await _db.SaveData(sql, parameters, ct);
+		return _db.SaveData(sql, parameters, ct);
 	}
 
-	public async Task InvalidateAsync(Guid tokenId, CancellationToken ct)
+	public Task InvalidateAsync(Guid tokenId, CancellationToken ct)
 	{
-		var sql = """
- 			UPDATE RefreshToken SET invalidated = 1 WHERE id = @tokenId
- 		""";
+		const string sql = "UPDATE RefreshToken SET invalidated = 1 WHERE id = @tokenId";
  		
  		var parameters = new DynamicParameters(new { tokenId });
  		
-		await _db.SaveData(sql, parameters, ct);
+		return _db.SaveData(sql, parameters, ct);
 	}
 
-	public async Task InvalidateAllAsync(Guid userId, CancellationToken ct)
+	public Task InvalidateAllAsync(Guid userId, CancellationToken ct)
 	{
-		var sql = """
- 			UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @userId
- 		""";
+		const string sql = "UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @userId";
 		
  		var parameters = new DynamicParameters(new { userId });
 		
-		await _db.SaveData(sql, parameters, ct);
+		return _db.SaveData(sql, parameters, ct);
 	}
 }

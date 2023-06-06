@@ -66,8 +66,6 @@ public class Program
 		app.UseAuthentication();
 		app.UseAuthorization();
 		
-		// Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-		
 		app.Run();
 	}
 }

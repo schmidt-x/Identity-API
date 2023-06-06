@@ -240,7 +240,7 @@ public class AuthService : IAuthService
 		
 		if (refreshToken == null)
 		{
-			return AuthResultFail("refreshToken", "Invalid refresh token"); // TODO 
+			return AuthResultFail("refreshToken", "Invalid refresh token");
 		}
 		
 		if (refreshToken.Invalidated)

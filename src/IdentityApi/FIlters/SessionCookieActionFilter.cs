@@ -25,7 +25,7 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 		
 		if (!Guid.TryParse(rawSessionId, out var _))
 		{
-			throw new SecurityException("On validating session ID. Session ID (Guid) was modified");
+			throw new SecurityException("On validating session ID. Session ID (Guid) has been modified");
 		}
 		
 		ctx.Items.Add("sessionId", rawSessionId);

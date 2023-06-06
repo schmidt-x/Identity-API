@@ -43,6 +43,8 @@ public static class ServiceCollectionExtentions
 	
 	public static IServiceCollection AddDataAccess(this IServiceCollection services)
 	{
+		Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+		
 		return services
 			.AddScoped<ISqlDataAccess, SqlDataAccess>();
 	}

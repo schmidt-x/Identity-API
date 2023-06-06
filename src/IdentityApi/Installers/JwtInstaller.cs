@@ -70,6 +70,11 @@ public static class JwtInstaller
 						
 						var userRole = await userRepo.GetRoleAsync(userId);
 						
+						if (userRole == null)
+						{
+							throw new SecurityTokenException($"The token passed validation but the role is not present. User: {userId}");
+						}
+						
 						var claims = user.Claims.Append(new Claim("role", userRole));
 						var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
 						tvc.Principal = new ClaimsPrincipal(identity);
