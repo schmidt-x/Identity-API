@@ -137,7 +137,7 @@ public class AuthService : IAuthService
 		{
 			Id = Guid.NewGuid(),
 			Username = userRegistration.Username,
-			Password = _passwordService.HashPassword(userRegistration.Password),
+			PasswordHash = _passwordService.HashPassword(userRegistration.Password),
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
@@ -214,7 +214,7 @@ public class AuthService : IAuthService
 	{
 		var user = await _userRepo.GetAsync(userLogin.Login, ct);
 		
-		if (user == null || !_passwordService.VerifyPassword(userLogin.Password, user.Password))
+		if (user == null || !_passwordService.VerifyPassword(userLogin.Password, user.PasswordHash))
 		{
 			return AuthResultFail("user", "Incorrect login/password");
 		}

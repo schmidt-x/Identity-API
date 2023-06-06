@@ -13,14 +13,14 @@ public class InitialMigration_202305231000 : Migration
 				id uniqueidentifier not null,
 				username nvarchar(32) not null, 
 				email nvarchar(254) not null,
-				password nvarchar(256) not null,
+				password_hash nvarchar(256) not null,
 				created_at datetime2 not null,
 				updated_at datetime2 not null,
 				role nvarchar(16) not null,
 				
-				constraint PK_User PRIMARY KEY (id),
+				constraint PK_User primary key (id),
 				constraint UQ_User_username Unique (username),
-				constraint UQ_User_email UNIQUE (email)
+				constraint UQ_User_email Unique (email)
 			)
 		
 		if not exists (select 1 from sys.tables where name = 'RefreshToken')

@@ -8,37 +8,17 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 	public UserRegisterValidator()
 	{
 		RuleFor(x => x.Username)
-			.Custom(ValidateUsername);
+			.NotEmpty().WithMessage("Username required")
+			.MinimumLength(3).WithMessage("Username must contain at least 3 characters");
 		
 		RuleFor(x => x.Password)
 			.Custom(ValidatePassword);
 		
 		RuleFor(x => x.ConfirmPassword)
-			.Custom(ValidateConfirmPassword);
+			.NotEmpty().WithMessage("Password confirmation is required")
+			.Equal(user => user.Password).WithMessage("Passwords do not match");
 	}
 
-	private static void ValidateUsername(string username, ValidationContext<UserRegistration> context)
-	{
-		if (string.IsNullOrWhiteSpace(username))
-		{
-			context.AddFailure("Username is required");
-			return;
-		}
-
-		if (username.Length < 3)
-			context.AddFailure("Username must contain at least 3 characters");
-	}
-	private static void ValidateConfirmPassword(string confirmPassword, ValidationContext<UserRegistration> context)
-	{
-		if (string.IsNullOrWhiteSpace(confirmPassword))
-		{
-			context.AddFailure("Password confirmation is required");
-			return;
-		}
-
-		if (confirmPassword != context.InstanceToValidate.Password)
-			context.AddFailure("Passwords do not match");
-	}
 	private static void ValidatePassword(string? password, ValidationContext<UserRegistration> context)
 	{
 		if (string.IsNullOrWhiteSpace(password))

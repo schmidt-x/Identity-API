@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace IdentityApi.Contracts.DTOs;
+﻿namespace IdentityApi.Contracts.DTOs;
 
 public class UserLogin
 {

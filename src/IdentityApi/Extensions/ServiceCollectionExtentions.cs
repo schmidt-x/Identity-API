@@ -5,6 +5,8 @@ using IdentityApi.Data.Repositories;
 using IdentityApi.Filters;
 using IdentityApi.Services;
 using IdentityApi.Validation.DTOValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IdentityApi.Extensions;
@@ -15,10 +17,14 @@ public static class ServiceCollectionExtentions
 	{
 		services.AddAuthorization(o =>
 		{
+			o.FallbackPolicy = new AuthorizationPolicyBuilder()
+				.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+				.RequireAuthenticatedUser()
+				.Build();
+				
 			o.AddPolicy("user", b =>
 			{
-				b.RequireAuthenticatedUser()
-					.RequireClaim("role", "user");
+				b.RequireClaim("role", "user");
 			});
 		});
 		

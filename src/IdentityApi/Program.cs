@@ -1,15 +1,9 @@
-using System;
-using System.IO;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using FluentValidation.AspNetCore;
 using IdentityApi.Extensions;
 using IdentityApi.Filters;
 using IdentityApi.Installers;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc.ApplicationModels;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
@@ -53,11 +47,7 @@ public class Program
 				options.SuppressModelStateInvalidFilter = true);
 		
 		builder.Services
-			.AddSwaggerGen(o =>
-			{
-				var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-				o.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
-			})
+			.AddSwagger()
 			.AddFluentValidationRulesToSwagger();
 		
 		builder.Services.AddMemoryCache();

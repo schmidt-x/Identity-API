@@ -39,11 +39,11 @@ public class UserRepository : IUserRepository
 		return await _db.LoadScalar<bool>(sql, parameters, ct);
 	}
 
-	public async Task SaveAsync(User user, CancellationToken ct)
+	public async Task SaveAsync(User user, CancellationToken ct = default)
 	{
 		const string sql = """
-			INSERT INTO [User] (id, username, email, password, created_at, updated_at, role)
-			VALUES (@id, @username, @email, @password, @createdAt, @updatedAt, @role)
+			INSERT INTO [User] (id, username, email, password_hash, created_at, updated_at, role)
+			VALUES (@id, @username, @email, @passwordHash, @createdAt, @updatedAt, @role)
 		""";
 		
 		var parameters= new DynamicParameters(user);
@@ -54,7 +54,7 @@ public class UserRepository : IUserRepository
 	public async Task<User?> GetAsync(string email, CancellationToken ct = default)
 	{
 		const string sql = """
-			SELECT id, username, email, id, username, email, password, created_at createdAt, updated_at updatedAt, role
+			SELECT id, username, email, id, username, email, password_hash passwordHash, created_at createdAt, updated_at updatedAt, role
 			FROM [User] WHERE email = @email
 		""";
 		
@@ -66,7 +66,7 @@ public class UserRepository : IUserRepository
 	public async Task<User?> GetAsync(Guid id, CancellationToken ct = default)
 	{
 		const string sql = """
-			SELECT id, username, email, id, username, email, password, created_at createdAt, updated_at updatedAt, role
+			SELECT id, username, email, id, username, email, password_hash passwordHash, created_at createdAt, updated_at updatedAt, role
 			FROM [User] WHERE id = @id
 		""";
 		

@@ -5,6 +5,7 @@ using IdentityApi.Contracts.DTOs;
 using IdentityApi.Filters;
 using IdentityApi.Responses;
 using IdentityApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityApi.Controllers;
@@ -12,6 +13,7 @@ namespace IdentityApi.Controllers;
 [Consumes("application/json")]
 [Produces("application/json")]
 [ApiController, Route("api/[controller]")]
+[AllowAnonymous]
 public class AuthController : ControllerBase
 {
 	private readonly IAuthService _authService;
@@ -32,14 +34,15 @@ public class AuthController : ControllerBase
 	[HttpPost("session")]
 	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> CreateUserSession(EmailRegistration emailRegistration, CancellationToken ct)
+	public async Task<IActionResult> CreateSession(EmailRegistration emailRegistration, CancellationToken ct)
 	{
 		var sessionResult = await _authService.CreateSessionAsync(emailRegistration.Email, ct);
 		
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		_emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
+		// _emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
+		Console.WriteLine(sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
 			"session_id",
