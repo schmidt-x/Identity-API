@@ -8,10 +8,12 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 	public UserRegisterValidator()
 	{
 		RuleFor(x => x.Username)
-			.NotEmpty().WithMessage("Username required")
+			.NotEmpty().WithMessage("Username is required")
 			.MinimumLength(3).WithMessage("Username must contain at least 3 characters");
 		
 		RuleFor(x => x.Password)
+			.NotEmpty().WithMessage("Password is required")
+			.MinimumLength(8).WithMessage("Password must contain at least 8 characters")
 			.Custom(ValidatePassword);
 		
 		RuleFor(x => x.ConfirmPassword)
@@ -21,14 +23,11 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 
 	private static void ValidatePassword(string? password, ValidationContext<UserRegistration> context)
 	{
-		if (string.IsNullOrWhiteSpace(password))
-		{
-			context.AddFailure("Password is required");
-			return;
-		}
-				
-		if (password.Length < 8)
-			context.AddFailure("Password must contain at least 8 characters");
+		// the reason why I didn't handle 'Not empty' and 'MinimumLength' requirements here
+		// is that the method 'AddFluentValidationRulesToSwagger' does not detect 'Custom' restrictions
+		// and they are not applied to the Swagger documentation
+		
+		if (string.IsNullOrWhiteSpace(password)) return;
 				
 		var letter = false;
 		var digit = false;
