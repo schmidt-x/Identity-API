@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
+using IdentityApi.Contracts.DTOs;
 using IdentityApi.Data.DataAccess;
 using IdentityApi.Models;
 
@@ -63,6 +64,18 @@ public class UserRepository : IUserRepository
 		var parameters = new DynamicParameters(new { id });
 		
 		return _db.LoadSingle<User>(sql, parameters, ct);
+	}
+	
+	public Task<UserProfile?> GetProfileAsync(Guid id, CancellationToken ct = default)
+	{
+		const string sql = """
+			SELECT username, email, created_at, updated_at, role
+			FROM [User] WHERE id = @id
+		""";
+		
+		var parameters = new DynamicParameters(new { id });
+		
+		return _db.LoadSingle<UserProfile>(sql, parameters, ct);
 	}
 
 	public Task<string?> GetRoleAsync(Guid id, CancellationToken ct = default)

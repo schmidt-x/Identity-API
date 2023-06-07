@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using IdentityApi.Contracts.DTOs;
 using IdentityApi.Models;
 
 namespace IdentityApi.Data.Repositories;
@@ -12,5 +13,6 @@ public interface IUserRepository
 	Task SaveAsync(User user, CancellationToken ct = default);
 	Task<User?> GetAsync(string email, CancellationToken ct = default);
 	Task<User?> GetAsync(Guid id, CancellationToken ct = default);
+	Task<UserProfile?> GetProfileAsync(Guid id, CancellationToken ct = default);
 	Task<string?> GetRoleAsync(Guid id, CancellationToken ct = default);
 }
