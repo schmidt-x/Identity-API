@@ -38,7 +38,8 @@ public static class ServiceCollectionExtentions
 			.AddScoped<IValidator<UserLogin>, UserLoginValidator>()
 			.AddScoped<IValidator<EmailRegistration>, EmailRequestValidator>()
 			.AddScoped<IValidator<CodeVerification>, CodeVerificaitonValidator>()
-			.AddScoped<IValidator<TokenRefreshing>, TokenRefreshingValidator>();
+			.AddScoped<IValidator<TokenRefreshing>, TokenRefreshingValidator>()
+			.AddScoped<IValidator<UsernameUpdate>, UsernameUpdateValidator>();
 	}
 	
 	public static IServiceCollection AddDataAccess(this IServiceCollection services)
