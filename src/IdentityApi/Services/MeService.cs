@@ -19,12 +19,12 @@ public class MeService : IMeService
 		_passwordService = passwordService;
 	}
 	
+	
 	public Task<UserProfile> GetAsync(CancellationToken ct)
 	{
 		var userId = _userCtx.GetId();
 		
-		// TODO Should we care about null, if the user is authenticated anyway? 
-		return _userRepo.GetProfileAsync(userId, ct)!;
+		return _userRepo.GetProfileAsync(userId, ct);
 	}
 
 	public async Task<Result<UserProfile>> UpdateUsername(UsernameUpdate update, CancellationToken ct)
@@ -51,11 +51,11 @@ public class MeService : IMeService
 			return new(){ Errors = new() { {key!, new[] { error }}}};
 		}
 		
-		var result = await _userRepo.ChangeUsername(id, update.Username, ct);
+		var userProfile = await _userRepo.ChangeUsername(id, update.Username, ct);
 		
 		return new()
 		{
-			Subject = result!,
+			Subject = userProfile,
 			Succeeded = true,
 		};
 	}

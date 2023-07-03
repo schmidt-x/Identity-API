@@ -13,7 +13,7 @@ public interface IUserRepository
 	Task SaveAsync(User user, CancellationToken ct = default);
 	Task<User?> GetAsync(string email, CancellationToken ct = default);
 	Task<User?> GetAsync(Guid id, CancellationToken ct = default);
-	Task<UserProfile?> GetProfileAsync(Guid id, CancellationToken ct = default);
-	Task<string?> GetRoleAsync(Guid id, CancellationToken ct = default);
-	Task<UserProfile?> ChangeUsername(Guid id, string username, CancellationToken ct = default);
+	Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct = default);
+	Task<string> GetRoleAsync(Guid id, CancellationToken ct = default);
+	Task<UserProfile> ChangeUsername(Guid id, string username, CancellationToken ct = default);
 }

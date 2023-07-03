@@ -54,7 +54,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { email });
 		
-		return _db.LoadSingle<User>(sql, parameters, ct);
+		return _db.LoadSingleOrDefault<User>(sql, parameters, ct);
 	}
 	
 	public Task<User?> GetAsync(Guid id, CancellationToken ct = default)
@@ -63,10 +63,10 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id });
 		
-		return _db.LoadSingle<User>(sql, parameters, ct);
+		return _db.LoadSingleOrDefault<User>(sql, parameters, ct);
 	}
 	
-	public Task<UserProfile?> GetProfileAsync(Guid id, CancellationToken ct = default)
+	public Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct = default)
 	{
 		const string sql = """
 			SELECT username, email, created_at, updated_at, role
@@ -78,7 +78,7 @@ public class UserRepository : IUserRepository
 		return _db.LoadSingle<UserProfile>(sql, parameters, ct);
 	}
 
-	public Task<string?> GetRoleAsync(Guid id, CancellationToken ct = default)
+	public Task<string> GetRoleAsync(Guid id, CancellationToken ct = default)
 	{
 		const string sql = "SELECT role FROM [User] WHERE id = @id";
 		
@@ -87,7 +87,7 @@ public class UserRepository : IUserRepository
 		return _db.LoadScalar<string>(sql, parameters, ct);
 	}
 	
-	public async Task<UserProfile?> ChangeUsername(Guid id, string username, CancellationToken ct = default)
+	public async Task<UserProfile> ChangeUsername(Guid id, string username, CancellationToken ct = default)
 	{
 		const string sql = """
 			UPDATE [User]
