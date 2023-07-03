@@ -1,10 +1,7 @@
-﻿using FluentValidation;
-using IdentityApi.Contracts.DTOs;
-using IdentityApi.Data.DataAccess;
+﻿using IdentityApi.Data.DataAccess;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Filters;
 using IdentityApi.Services;
-using IdentityApi.Validation.DTOValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,17 +26,6 @@ public static class ServiceCollectionExtentions
 		});
 		
 		return services;
-	}
-	
-	public static IServiceCollection AddValidators(this IServiceCollection services)
-	{
-		return services
-			.AddScoped<IValidator<UserRegistration>, UserRegisterValidator>()
-			.AddScoped<IValidator<UserLogin>, UserLoginValidator>()
-			.AddScoped<IValidator<EmailRegistration>, EmailRequestValidator>()
-			.AddScoped<IValidator<CodeVerification>, CodeVerificaitonValidator>()
-			.AddScoped<IValidator<TokenRefreshing>, TokenRefreshingValidator>()
-			.AddScoped<IValidator<UsernameUpdate>, UsernameUpdateValidator>();
 	}
 	
 	public static IServiceCollection AddDataAccess(this IServiceCollection services)

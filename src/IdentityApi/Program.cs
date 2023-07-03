@@ -1,3 +1,4 @@
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using IdentityApi.Extensions;
 using IdentityApi.Filters;
@@ -32,7 +33,7 @@ public class Program
 		builder.SetEmailOptions();
 		
 		builder.Services
-			.AddValidators()
+			.AddValidatorsFromAssemblyContaining<Program>()
 			.AddFluentValidationAutoValidation();
 		
 		builder.Services.AddHttpContextAccessor();
@@ -61,7 +62,7 @@ public class Program
 		app.UseSwagger();
 		app.UseSwaggerUI();
 		
-		app.RunMigrations();
+		// app.RunMigrations();
 		
 		app.UseAuthentication();
 		app.UseAuthorization();
