@@ -87,7 +87,7 @@ public class UserRepository : IUserRepository
 		return _db.LoadScalar<string>(sql, parameters, ct);
 	}
 	
-	public async Task<UserProfile> ChangeUsername(Guid id, string username, CancellationToken ct = default)
+	public async Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct = default)
 	{
 		const string sql = """
 			UPDATE [User]

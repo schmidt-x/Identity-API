@@ -8,5 +8,5 @@ namespace IdentityApi.Services;
 public interface IMeService
 {
 	Task<UserProfile> GetAsync(CancellationToken ct);
-	Task<Result<UserProfile>> UpdateUsername(UsernameUpdate user, CancellationToken ct);
+	Task<Result<UserProfile>> UpdateUsernameAsync(UsernameUpdate user, CancellationToken ct);
 }

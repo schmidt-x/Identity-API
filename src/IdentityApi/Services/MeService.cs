@@ -27,7 +27,7 @@ public class MeService : IMeService
 		return _userRepo.GetProfileAsync(userId, ct);
 	}
 
-	public async Task<Result<UserProfile>> UpdateUsername(UsernameUpdate update, CancellationToken ct)
+	public async Task<Result<UserProfile>> UpdateUsernameAsync(UsernameUpdate update, CancellationToken ct)
 	{
 		var id = _userCtx.GetId();
 		var user = (await _userRepo.GetAsync(id, ct))!;
@@ -48,10 +48,10 @@ public class MeService : IMeService
 		
 		if (error != null)
 		{
-			return new(){ Errors = new() { {key!, new[] { error }}}};
+			return new() { Errors = new() {{ key!, new[] { error }}}};
 		}
 		
-		var userProfile = await _userRepo.ChangeUsername(id, update.Username, ct);
+		var userProfile = await _userRepo.ChangeUsernameAsync(id, update.Username, ct);
 		
 		return new()
 		{

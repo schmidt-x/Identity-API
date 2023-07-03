@@ -15,5 +15,5 @@ public interface IUserRepository
 	Task<User?> GetAsync(Guid id, CancellationToken ct = default);
 	Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct = default);
 	Task<string> GetRoleAsync(Guid id, CancellationToken ct = default);
-	Task<UserProfile> ChangeUsername(Guid id, string username, CancellationToken ct = default);
+	Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct = default);
 }
