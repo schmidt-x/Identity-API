@@ -1,7 +1,6 @@
 ﻿namespace IdentityApi.Models;
 
-public class 
-UserSession
+public class UserSession
 {
 	public string EmailAddress { get; set; } = default!;
 	public string VerificationCode { get; set; } = default!;
