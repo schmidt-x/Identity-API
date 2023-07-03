@@ -86,4 +86,20 @@ public class UserRepository : IUserRepository
 		
 		return _db.LoadScalar<string>(sql, parameters, ct);
 	}
+	
+	public async Task<UserProfile?> ChangeUsername(Guid id, string username, CancellationToken ct = default)
+	{
+		const string sql = """
+			UPDATE [User]
+			SET username = @username
+			WHERE id = @id
+			
+			SELECT username, email, created_at, updated_at, role
+			FROM [User] WHERE id = @id
+		""";
+		
+		var parameters = new DynamicParameters(new { id, username });
+		
+		return await _db.SaveData<UserProfile>(sql, parameters, ct);
+	}
 }
