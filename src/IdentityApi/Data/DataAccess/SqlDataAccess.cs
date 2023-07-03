@@ -48,4 +48,11 @@ public class SqlDataAccess : ISqlDataAccess
 		
 		await cnn.ExecuteAsync(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
+
+	public async Task<TResult> SaveData<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	{
+		await using var cnn = GetConnection();
+		
+		return await cnn.QuerySingleAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
+	}
 }
