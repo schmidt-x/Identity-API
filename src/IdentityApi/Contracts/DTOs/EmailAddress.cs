@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.Contracts.DTOs;
 
-public class EmailRegistration
+public class EmailAddress
 {
 	public string Email { get; set; } = default!;
 }

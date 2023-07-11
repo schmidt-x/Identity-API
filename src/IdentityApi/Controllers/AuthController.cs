@@ -34,9 +34,9 @@ public class AuthController : ControllerBase
 	[HttpPost("session")]
 	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> CreateSession(EmailRegistration emailRegistration, CancellationToken ct)
+	public async Task<IActionResult> CreateSession(EmailAddress emailAddress, CancellationToken ct)
 	{
-		var sessionResult = await _authService.CreateSessionAsync(emailRegistration.Email, ct);
+		var sessionResult = await _authService.CreateSessionAsync(emailAddress.Email, ct);
 		
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
@@ -72,7 +72,7 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public IActionResult VerifyEmail(CodeVerification codeVerification)
 	{
-		var id = (string) HttpContext.Items["sessionId"]!;
+		var id = (string) HttpContext.Items["sessionID"]!;
 		
 		var sessionResult = _authService.VerifyEmail(id, codeVerification.Code);
 		
@@ -98,7 +98,7 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> Register(UserRegistration userRegistration, CancellationToken ct)
 	{
-		var id = (string) HttpContext.Items["sessionId"]!;
+		var id = (string) HttpContext.Items["sessionID"]!;
 		
 		var authenticationResult = await _authService.RegisterAsync(id, userRegistration, ct);
 		

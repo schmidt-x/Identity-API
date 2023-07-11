@@ -50,6 +50,7 @@ public static class ServiceCollectionExtentions
 			.AddScoped<IEmailService, EmailService>()
 			.AddScoped<IPasswordService, PasswordService>()
 			.AddScoped<IUserContext, UserContext>()
+			.AddScoped<ICacheService, CacheService>()
 			.AddScoped<IMeService, MeService>();
 	}
 	

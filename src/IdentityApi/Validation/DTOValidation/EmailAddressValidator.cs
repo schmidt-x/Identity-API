@@ -3,9 +3,9 @@ using IdentityApi.Contracts.DTOs;
 
 namespace IdentityApi.Validation.DTOValidation;
 
-public class EmailRequestValidator : AbstractValidator<EmailRegistration>
+public class EmailAddressValidator : AbstractValidator<EmailAddress>
 {
-	public EmailRequestValidator()
+	public EmailAddressValidator()
 	{
 		RuleFor(x => x.Email)
 			.NotEmpty().WithMessage("Email address is required")

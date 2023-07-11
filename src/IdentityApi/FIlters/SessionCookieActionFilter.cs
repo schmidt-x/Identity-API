@@ -17,7 +17,7 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 		{
 			context.Result = new BadRequestObjectResult(new FailResponse { Errors = new()
 			{
-				{ "SessionID", new[] { "Session ID is required" } }
+				{ "sessionID", new[] { "Session ID is required" } }
 			}});
 			
 			return;
@@ -28,7 +28,7 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 			throw new SecurityException("On validating session ID. Session ID (Guid) has been modified");
 		}
 		
-		ctx.Items.Add("sessionId", rawSessionId);
+		ctx.Items.Add("sessionID", rawSessionId);
 		await next();
 	}
 }

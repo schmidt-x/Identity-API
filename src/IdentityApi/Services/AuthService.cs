@@ -12,10 +12,8 @@ using IdentityApi.Data.Repositories;
 using IdentityApi.Models;
 using IdentityApi.Results;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Bcrypt = BCrypt.Net.BCrypt;
 
 namespace IdentityApi.Services;
 
@@ -23,7 +21,7 @@ public class AuthService : IAuthService
 {
 	private readonly IUserRepository _userRepo;
 	private readonly IRefreshTokenRepository _tokenRepo;
-	private readonly IMemoryCache _userSession;
+	private readonly ICacheService _cacheService;
 	private readonly TokenValidationParameters _tokenValidationParameters;
 	private readonly JwtOptions _jwt;
 	private readonly IPasswordService _passwordService;
@@ -31,14 +29,14 @@ public class AuthService : IAuthService
 	public AuthService(
 		IUserRepository userRepo, 
 		IRefreshTokenRepository tokenRepo,
-		IMemoryCache userSession,
+		ICacheService cacheService,
 		IOptions<JwtOptions> jwtOptions,
 		TokenValidationParameters tokenValidationParameters,
 		IPasswordService passwordService)
 	{
 		_userRepo = userRepo;
 		_tokenRepo = tokenRepo;
-		_userSession = userSession;
+		_cacheService = cacheService;
 		_tokenValidationParameters = tokenValidationParameters;
 		_jwt = jwtOptions.Value;
 		_passwordService = passwordService;
@@ -64,7 +62,7 @@ public class AuthService : IAuthService
 			VerificationCode = verificationCode,
 		};
 		
-		_userSession.Set(sessionId, session, TimeSpan.FromMinutes(5));
+		_cacheService.Set(sessionId, session, TimeSpan.FromMinutes(5));
 		
 		return new SessionResult
 		{
@@ -77,19 +75,19 @@ public class AuthService : IAuthService
 	public SessionResult VerifyEmail(string sessionId, string verificationCode)
 	{
 		string key = "session";
-		string[]? error = null;
+		string[]? errors = null;
 		
-		if (!_userSession.TryGetValue<UserSession>(sessionId, out var session))
+		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
 		{
-			error = new[] { "No session was found" };
+			errors = new[] { "No session was found" };
 		}
 		else if (session!.IsVerified)
 		{
-			error = new[] { "Email has already been verified" };
+			errors = new[] { "Email has already been verified" };
 		} 
 		else if (session.Attempts >= 3)
 		{
-			error = new[] { "No attmempts are left" };
+			errors = new[] { "No attmempts are left" };
 		}
 		else if (session.VerificationCode != verificationCode)
 		{
@@ -103,12 +101,12 @@ public class AuthService : IAuthService
 				_ => "No attempts are left"
 			};
 			
-			error = new[] { "Wrong verification code", errorMessage };
+			errors = new[] { "Wrong verification code", errorMessage };
 		}
 		
-		if (error != null)
+		if (errors != null)
 		{
-			return new SessionResult { Errors = new() { { key, error } }};
+			return new SessionResult { Errors = new() { { key, errors } }};
 		}
 		
 		session!.IsVerified = true;
@@ -117,7 +115,7 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration, CancellationToken ct)
 	{
-		if (!_userSession.TryGetValue<UserSession>(sessionId, out var session))
+		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
 		{
 			return AuthResultFail("session", "No session was found");
 		}
