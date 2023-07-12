@@ -75,7 +75,7 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	public SessionResult VerifyEmail(string sessionId, string verificationCode)
+	public ErrorsResult VerifyEmail(string sessionId, string verificationCode)
 	{
 		string key = "session";
 		string[]? errors = null;
@@ -86,7 +86,7 @@ public class AuthService : IAuthService
 		}
 		else if (session!.IsVerified)
 		{
-			errors = new[] { "Email has already been verified" };
+			errors = new[] { "Email address is already verified" };
 		} 
 		else if (session.Attempts >= 3)
 		{
@@ -109,11 +109,11 @@ public class AuthService : IAuthService
 		
 		if (errors != null)
 		{
-			return new SessionResult { Errors = new() { { key, errors } }};
+			return new ErrorsResult { Errors = new() { { key, errors } } };
 		}
 		
 		session!.IsVerified = true;
-		return new SessionResult { Succeeded = true };
+		return new ErrorsResult { Succeeded = true };
 	}
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration, CancellationToken ct)

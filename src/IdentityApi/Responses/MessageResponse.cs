@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.Responses;
 
-public class SessionSuccessResponse
+public class MessageResponse
 {
 	public string Message { get; set; } = default!;
 }

@@ -32,7 +32,7 @@ public class AuthController : ControllerBase
 	/// <response code="200">Verification code is sent and the session id is retured in cookie</response>
 	/// <response code="400">Email address is already taken or invalid</response>
 	[HttpPost("session")]
-	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
+	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> CreateSession(EmailAddress emailAddress, CancellationToken ct)
 	{
@@ -41,7 +41,7 @@ public class AuthController : ControllerBase
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		// _emailService.Send(emailRegistration.Email, sessionResult.VerificationCode); // TODO return errors if any
+		_emailService.Send(emailAddress.Email, sessionResult.VerificationCode); // TODO return errors if any
 		Console.WriteLine(sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
@@ -55,10 +55,7 @@ public class AuthController : ControllerBase
 			}
 		);
 		
-		return Ok(new SessionSuccessResponse
-		{
-			Message = "Verification code is sent to your email"
-		});
+		return Ok(new MessageResponse { Message = "Verification code is sent to your email" });
 	}
 	
 	/// <summary>
@@ -68,7 +65,7 @@ public class AuthController : ControllerBase
 	/// <response code="400">Vefirication code is wrong</response>
 	[HttpPost("verification")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
-	[ProducesResponseType(typeof(SessionSuccessResponse), 200)]
+	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public IActionResult VerifyEmail(CodeVerification codeVerification)
 	{
@@ -81,10 +78,7 @@ public class AuthController : ControllerBase
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors});
 		}
 		
-		return Ok(new SessionSuccessResponse
-		{
-			Message = "Email address has successfully been verified"
-		});
+		return Ok(new MessageResponse { Message = "Email address has successfully been verified" });
 	}
 	
 	/// <summary>
