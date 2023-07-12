@@ -23,6 +23,7 @@ public class AuthService : IAuthService
 	private readonly IRefreshTokenRepository _tokenRepo;
 	private readonly ICacheService _cacheService;
 	private readonly TokenValidationParameters _tokenValidationParameters;
+	private readonly ICodeGenerationService _codeService;
 	private readonly JwtOptions _jwt;
 	private readonly IPasswordService _passwordService;
 
@@ -32,12 +33,14 @@ public class AuthService : IAuthService
 		ICacheService cacheService,
 		IOptions<JwtOptions> jwtOptions,
 		TokenValidationParameters tokenValidationParameters,
+		ICodeGenerationService codeService,
 		IPasswordService passwordService)
 	{
 		_userRepo = userRepo;
 		_tokenRepo = tokenRepo;
 		_cacheService = cacheService;
 		_tokenValidationParameters = tokenValidationParameters;
+		_codeService = codeService;
 		_jwt = jwtOptions.Value;
 		_passwordService = passwordService;
 	}
@@ -53,7 +56,7 @@ public class AuthService : IAuthService
 			}};
 		}
 		
-		string verificationCode = GenerateVerificationCode();
+		string verificationCode = _codeService.Generate(6);
 		
 		var sessionId = Guid.NewGuid().ToString();
 		var session = new UserSession
@@ -267,16 +270,6 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(refreshToken.UserId, email);
 	}
 	
-	
-	private static string GenerateVerificationCode()
-	{
-		const string chars = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
-		
-		return new string(Enumerable
-			.Repeat(chars, 6)
-			.Select(x => x[Random.Shared.Next(x.Length)])
-			.ToArray());
-	}
 	
 	private static (string key, string value) GetSqlUQConstraintMessage(SqlException ex)
 	{
