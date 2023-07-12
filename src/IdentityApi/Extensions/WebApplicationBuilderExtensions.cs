@@ -29,4 +29,16 @@ public static class WebApplicationBuilderExtensions
 		
 		return builder;
 	}
+	
+	public static WebApplicationBuilder SetVerificationCodeOptions(this WebApplicationBuilder builder)
+	{
+		builder.Services
+			.AddOptions<VerificationCodeOptions>()
+			.Bind(builder.Configuration.GetRequiredSection(VerificationCodeOptions.VerificationCode))
+			.Validate(x => !string.IsNullOrEmpty(x.Text), "Text for code generation is required")
+			.Validate(x => x.Length >= 6, "Length for code generation must contain at least 6 characters")
+			.ValidateOnStart();
+		
+		return builder;
+	}
 }

@@ -56,7 +56,7 @@ public class AuthService : IAuthService
 			}};
 		}
 		
-		string verificationCode = _codeService.Generate(6);
+		string verificationCode = _codeService.Generate();
 		
 		var sessionId = Guid.NewGuid().ToString();
 		var session = new UserSession

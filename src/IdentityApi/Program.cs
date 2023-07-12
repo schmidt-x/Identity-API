@@ -29,8 +29,10 @@ public class Program
 		
 		builder.AddFluentMigrator();
 		
-		builder.SetConnectionStringsOptions();
-		builder.SetEmailOptions();
+		builder
+			.SetConnectionStringsOptions()
+			.SetEmailOptions()
+			.SetVerificationCodeOptions();
 		
 		builder.Services
 			.AddValidatorsFromAssemblyContaining<Program>()
