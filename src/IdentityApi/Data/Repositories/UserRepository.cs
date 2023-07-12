@@ -87,11 +87,11 @@ public class UserRepository : IUserRepository
 		return _db.LoadScalar<string>(sql, parameters, ct);
 	}
 	
-	public async Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct = default)
+	public Task<UserProfile> UpdateUsernameAsync(Guid id, string username, CancellationToken ct = default)
 	{
 		const string sql = """
 			UPDATE [User]
-			SET username = @username
+			SET username = @username, updated_at = GETUTCDATE()
 			WHERE id = @id
 			
 			SELECT username, email, created_at, updated_at, role
@@ -100,6 +100,22 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id, username });
 		
-		return await _db.SaveData<UserProfile>(sql, parameters, ct);
+		return _db.SaveData<UserProfile>(sql, parameters, ct);
+	}
+
+	public Task<UserProfile> UpdateEmailAsync(Guid id, string email, CancellationToken ct = default)
+	{
+		const string sql = """
+			UPDATE [User]
+			SET email = @email, updated_at = GETUTCDATE()
+			WHERE id = @id
+			
+			SELECT username, email, created_at, updated_at, role
+			FROM [User] WHERE id = @id
+		""";
+		
+		var parameters = new DynamicParameters(new { id, email });
+		
+		return _db.SaveData<UserProfile>(sql, parameters, ct);
 	}
 }
