@@ -50,6 +50,6 @@ public class MeController : ControllerBase
 			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		return Ok(result.Subject);
+		return Ok(result.Value);
 	}
 }

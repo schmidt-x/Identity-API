@@ -51,11 +51,11 @@ public class MeService : IMeService
 			return new() { Errors = new() {{ key!, new[] { error }}}};
 		}
 		
-		var userProfile = await _userRepo.ChangeUsernameAsync(id, update.Username, ct);
+		var userProfile = await _userRepo.UpdateUsernameAsync(id, update.Username, ct);
 		
 		return new()
 		{
-			Subject = userProfile,
+			Value = userProfile,
 			Succeeded = true,
 		};
 	}
