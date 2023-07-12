@@ -21,4 +21,9 @@ public class CacheService : ICacheService
 	{
 		return _memoryCache.TryGetValue(key, out value);
 	}
+	
+	public void Remove(object key)
+	{
+		_memoryCache.Remove(key);
+	}
 }
