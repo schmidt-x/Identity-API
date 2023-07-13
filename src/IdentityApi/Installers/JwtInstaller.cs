@@ -4,9 +4,11 @@ using System.Security.Claims;
 using System.Text;
 using IdentityApi.Contracts.Options;
 using IdentityApi.Data.Repositories;
+using IdentityApi.Responses;
 using IdentityApi.Validation.OptionsValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -73,7 +75,21 @@ public static class JwtInstaller
 						var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
 						
 						tvc.Principal = new ClaimsPrincipal(identity);
+					},
+					
+					OnChallenge = async ctx =>
+					{
+						var resposne = ctx.Response;
+						resposne.StatusCode = 401;
+						
+						await resposne.WriteAsJsonAsync(new FailResponse
+						{
+							Errors = new() { { "auth", new[] { "Unauthorized. Register or log in" } } }
+						});
+						
+						ctx.HandleResponse();
 					}
+					
 				};
 			});
 		
