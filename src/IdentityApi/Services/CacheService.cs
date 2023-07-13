@@ -26,4 +26,9 @@ public class CacheService : ICacheService
 	{
 		_memoryCache.Remove(key);
 	}
+	
+	public T Refresh<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow)
+	{
+		return Set(key, value, absoluteExpirationRelativeToNow);
+	}
 }

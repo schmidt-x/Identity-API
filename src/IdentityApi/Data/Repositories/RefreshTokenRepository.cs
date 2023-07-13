@@ -34,7 +34,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		return _db.LoadSingle<RefreshToken>(sql, parameters, ct);
+		return _db.LoadSingleOrDefault<RefreshToken>(sql, parameters, ct);
 	}
 
 	public Task SetUsedAsync(Guid tokenId, CancellationToken ct)
