@@ -19,6 +19,8 @@ public class Program
 		builder.Host.UseSerilog((context, config) =>
 			config.ReadFrom.Configuration(context.Configuration));
 		
+		builder.Services.AddRouting(options => options.LowercaseUrls = true);
+		
 		builder.Services.AddFilters();
 		builder.Services.AddRepositories();
 		builder.Services.AddDataAccess();
@@ -59,6 +61,7 @@ public class Program
 		
 		app.UseExceptionHandlerMiddleware();
 		app.UseSerilogRequestLogging();
+		
 		app.MapControllers();
 		
 		app.UseSwagger();

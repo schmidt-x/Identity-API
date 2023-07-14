@@ -31,7 +31,7 @@ public class AuthController : ControllerBase
 	/// </summary>
 	/// <response code="200">Verification code is sent and the session id is retured in cookie</response>
 	/// <response code="400">Email address is already taken or invalid</response>
-	[HttpPost("session")]
+	[HttpPost("registration")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> CreateSession(EmailAddress emailAddress, CancellationToken ct)
@@ -63,7 +63,7 @@ public class AuthController : ControllerBase
 	/// </summary>
 	/// <response code="200">Email address is successfully verified</response>
 	/// <response code="400">Vefirication code is wrong</response>
-	[HttpPost("verification")]
+	[HttpPost("registration/verify-email")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
@@ -86,7 +86,7 @@ public class AuthController : ControllerBase
 	/// </summary>
 	/// <response code="200">User is successfully registered</response>
 	/// <response code="400">Username is already taken or validation failed</response>
-	[HttpPost("registration")]
+	[HttpPost("registration/register")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
