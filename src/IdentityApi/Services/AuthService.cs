@@ -89,9 +89,10 @@ public class AuthService : IAuthService
 		
 		if (session.VerificationCode != verificationCode)
 		{
-			var result = ResultEmptyFail("code", AttemptsLeft(session));
+			var attempts = ++session.Attempts;
+			var result = ResultEmptyFail("code", AttemptsErrors(attempts));
 			
-			if (session.Attempts >= 3)
+			if (attempts >= 3)
 			{
 				_cacheService.Remove(sessionId);
 			}
@@ -346,11 +347,11 @@ public class AuthService : IAuthService
 	{
 		return new() { Errors = new() { { key, errors } } };
 	}
-	private static string[] AttemptsLeft(UserSession session)
+	private static string[] AttemptsErrors(int attempts)
 	{
-		var attempts = 3 - (++session.Attempts);
+		var leftAttempts = 3 - attempts;
 		
-		var error = (attempts) switch
+		var error = (leftAttempts) switch
 		{
 			1 => "1 last attempt is left",
 			2 => "2 more attempts are left",
