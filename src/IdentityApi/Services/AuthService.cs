@@ -75,45 +75,34 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	public ErrorsResult VerifyEmail(string sessionId, string verificationCode)
+	public ResultEmpty VerifyEmail(string sessionId, string verificationCode)
 	{
-		string key = "session";
-		string[]? errors = null;
-		
 		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
 		{
-			errors = new[] { "No session was found" };
+			return ResultEmptyFail("session", "No session was found");
 		}
-		else if (session!.IsVerified)
+		
+		if (session!.IsVerified)
 		{
-			errors = new[] { "Email address is already verified" };
+			return ResultEmptyFail("session", "Email address is already verified");
 		} 
-		else if (session.Attempts >= 3)
+		
+		if (session.VerificationCode != verificationCode)
 		{
-			errors = new[] { "No attmempts are left" };
-		}
-		else if (session.VerificationCode != verificationCode)
-		{
-			key = "code";
-			var attempts = 3 - (++session.Attempts);
+			var result = ResultEmptyFail("code", AttemptsLeft(session));
 			
-			var errorMessage = (attempts) switch
+			if (session.Attempts >= 3)
 			{
-				1 => "1 last attempt is left",
-				2 => "2 more attempts are left",
-				_ => "No attempts are left"
-			};
+				_cacheService.Remove(sessionId);
+			}
 			
-			errors = new[] { "Wrong verification code", errorMessage };
+			return result;
 		}
 		
-		if (errors != null)
-		{
-			return new ErrorsResult { Errors = new() { { key, errors } } };
-		}
+		session.IsVerified = true;
+		_cacheService.Refresh(sessionId, session, TimeSpan.FromMinutes(5));
 		
-		session!.IsVerified = true;
-		return new ErrorsResult { Succeeded = true };
+		return new ResultEmpty { Succeeded = true };
 	}
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration, CancellationToken ct)
@@ -162,6 +151,8 @@ public class AuthService : IAuthService
 
 			return AuthResultFail(error.key, error.value);
 		}
+		
+		_cacheService.Remove(sessionId);
 		
 		return AuthResultSuccess(user.Id, user.Email);
 	}
@@ -350,5 +341,22 @@ public class AuthService : IAuthService
 				Email = email
 			}
 		};
+	}
+	private static ResultEmpty ResultEmptyFail(string key, params string[] errors)
+	{
+		return new() { Errors = new() { { key, errors } } };
+	}
+	private static string[] AttemptsLeft(UserSession session)
+	{
+		var attempts = 3 - (++session.Attempts);
+		
+		var error = (attempts) switch
+		{
+			1 => "1 last attempt is left",
+			2 => "2 more attempts are left",
+			_ => "No attempts are left"
+		};
+		
+		return new[] { "Wrong verification code", error };
 	}
 }
