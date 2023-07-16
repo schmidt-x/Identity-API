@@ -1,6 +1,8 @@
-﻿namespace IdentityApi.Services;
+﻿using System.Threading.Tasks;
+
+namespace IdentityApi.Services;
 
 public interface IEmailService
 {
-	void Send(string emailTo, string message);
+	Task SendAsync(string emailTo, string message);
 }

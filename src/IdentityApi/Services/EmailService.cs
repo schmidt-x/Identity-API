@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Mail;
+using System.Threading.Tasks;
 using IdentityApi.Contracts.Options;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +17,7 @@ public class EmailService : IEmailService
 	}
 	
 	
-	public void Send(string emailTo, string message)
+	public async Task SendAsync(string emailTo, string message)
 	{
 		using var emailMessage = new MailMessage
 		{
@@ -25,14 +27,14 @@ public class EmailService : IEmailService
 			Body = message,
 		};
 		
-		var smtpClient = new SmtpClient("smtp.gmail.com", 587)
+		using var smtpClient = new SmtpClient("smtp.gmail.com", 587)
 		{
 			EnableSsl = true,
 			DeliveryMethod = SmtpDeliveryMethod.Network,
 			UseDefaultCredentials = false,
-			Credentials = new NetworkCredential(emailMessage.From.Address, _email.Password)
+			Credentials = new NetworkCredential(_email.Address, _email.Password)
 		};
 		
-		smtpClient.Send(emailMessage);
+		await smtpClient.SendMailAsync(emailMessage);
 	}
 }

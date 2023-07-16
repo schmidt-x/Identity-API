@@ -50,10 +50,7 @@ public class AuthService : IAuthService
 	{
 		if (await _userRepo.EmailExistsAsync(email, ct))
 		{
-			return new SessionResult { Errors = new()
-			{
-				{ "email", new[] { $"Email address '{email}' is already taken" } }
-			}};
+			return SessionResultFail("email", $"Email address '{email}' is already taken");
 		}
 		
 		string verificationCode = _codeService.Generate();
@@ -103,7 +100,7 @@ public class AuthService : IAuthService
 		session.IsVerified = true;
 		_cacheService.Refresh(sessionId, session, TimeSpan.FromMinutes(5));
 		
-		return new ResultEmpty { Succeeded = true };
+		return ResultEmptySuccess();
 	}
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration, CancellationToken ct)
@@ -323,30 +320,20 @@ public class AuthService : IAuthService
 	}
 	
 	
-	private static AuthenticationResult AuthResultFail(string key, params string[] errors)
-	{
-		return new AuthenticationResult 
-		{ 
-			Succeeded = false,
-			Errors = new() { { key, errors } } 
-		};
-	}
-	private static AuthenticationResult AuthResultSuccess(Guid userId, string email)
-	{
-		return new AuthenticationResult
-		{
-			Succeeded = true,
-			User = new()
-			{
-				Id = userId,
-				Email = email
-			}
-		};
-	}
-	private static ResultEmpty ResultEmptyFail(string key, params string[] errors)
-	{
-		return new() { Errors = new() { { key, errors } } };
-	}
+	private static AuthenticationResult AuthResultFail(string key, params string[] errors) =>
+		new() { Errors = new() { { key, errors } } };
+	
+	private static AuthenticationResult AuthResultSuccess(Guid userId, string email) =>
+		new() { Succeeded = true, User = new() { Id = userId, Email = email } };
+	
+	private static ResultEmpty ResultEmptyFail(string key, params string[] errors) =>
+		new() { Errors = new() { { key, errors } } };
+	
+	private static ResultEmpty ResultEmptySuccess() => new() { Succeeded = true };
+		
+	private static SessionResult SessionResultFail(string key, params string[] errors) =>
+		new() { Errors = new() { { key, errors } } };
+		
 	private static string[] AttemptsErrors(int attempts)
 	{
 		var leftAttempts = 3 - attempts;
