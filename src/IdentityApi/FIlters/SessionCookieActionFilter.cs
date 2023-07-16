@@ -13,7 +13,7 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 	{
 		var ctx = context.HttpContext;
 		
-		if (!ctx.Request.Cookies.TryGetValue("session_id", out var rawSessionId))
+		if (!ctx.Request.Cookies.TryGetValue("session_id", out var sessionId))
 		{
 			context.Result = new BadRequestObjectResult(new FailResponse { Errors = new()
 			{
@@ -23,12 +23,12 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 			return;
 		} 
 		
-		if (!Guid.TryParse(rawSessionId, out var _))
+		if (!Guid.TryParse(sessionId, out var _))
 		{
-			throw new SecurityException("On validating session ID. Session ID (Guid) has been modified");
+			throw new SecurityException("Session ID (Guid) is not valid");
 		}
 		
-		ctx.Items.Add("sessionID", rawSessionId);
+		ctx.Items.Add("sessionID", sessionId);
 		await next();
 	}
 }

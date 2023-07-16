@@ -50,7 +50,7 @@ public class AuthController : ControllerBase
 			{
 				Secure = true,
 				HttpOnly = true,
-				Expires = DateTimeOffset.UtcNow.AddMinutes(5)
+				Expires = DateTimeOffset.UtcNow.AddMinutes(10)
 			}
 		);
 		

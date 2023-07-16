@@ -138,16 +138,20 @@ public class AuthService : IAuthService
 		}
 		catch(SqlException ex) when (ex.Number == 2627) // in case if 'Race condition' occurs
 		{
-			var error = GetSqlUQConstraintMessage(ex);
+			var result = GetSqlUQConstraintMessage(ex);
 
-			error.value = error.key switch
+			result.error = result.key switch
 			{
-				"username" => string.Format(error.value, user.Username),
-				"email" => string.Format(error.value, user.Email),
-				_ => error.value
+				// error has a placeholder 'Username/Email address '{0}' is already taken' 
+				"username" => string.Format(result.error, user.Username),
+				"email" => string.Format(result.error, user.Email),
+				_ => result.error
 			};
-
-			return AuthResultFail(error.key, error.value);
+			
+			// TODO if race condition occured and it's email,
+			// invalidate the cache so the user would start new registration session
+			
+			return AuthResultFail(result.key, result.error);
 		}
 		
 		_cacheService.Remove(sessionId);
@@ -260,7 +264,7 @@ public class AuthService : IAuthService
 	}
 	
 	
-	private static (string key, string value) GetSqlUQConstraintMessage(SqlException ex)
+	private static (string key, string error) GetSqlUQConstraintMessage(SqlException ex)
 	{
 		var message = ex.Message;
 		const int startIndex = 36;
@@ -269,21 +273,18 @@ public class AuthService : IAuthService
 		var constraint = message.Substring(startIndex, endIndex - startIndex);
 		
 		// constraint name template is 'Constraint_Table_column'
-		// for example 'UQ_User_email', 'UQ_User_username', etc.
+		// for example 'UQ_User_email' or 'UQ_User_username'
 		var parts = constraint.Split('_');
 		var key = parts[2];
 		
-		if (key == "id")
-			throw new ArgumentException($"Collision of guid. Constraint: '{constraint}'");
-		
-		var value = key switch
+		var error = key switch
 		{
 			"email" => "Email address '{0}' is already taken",
 			"username" => "Username '{0}' is already taken",
-			_ => string.Empty 
+			_ => throw new ArgumentException($"Unexpected column name: '{key}'") 
 		};
 		
-		return (key, value);
+		return (key, error);
 	}
 	
 	private ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out SecurityToken? securityToken)
