@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -31,5 +32,17 @@ public class UserContext : IUserContext
 		}
 		
 		return userId;
+	}
+	
+	public string GetEmail()
+	{
+		var email = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Email);
+		
+		if (email is null)
+		{
+			throw new SecurityException("User claim 'email' is not present");
+		}
+		
+		return email;
 	}
 }
