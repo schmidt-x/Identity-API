@@ -25,7 +25,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
 		var parameters = new DynamicParameters(refreshToken);
 		
-		return _db.SaveData(sql, parameters, ct);
+		return _db.ExecuteAsync(sql, parameters, ct);
 	}
 
 	public Task<RefreshToken?> GetAsync(Guid tokenId, CancellationToken ct)
@@ -34,7 +34,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		return _db.LoadSingleOrDefault<RefreshToken>(sql, parameters, ct);
+		return _db.QuerySingleOrDefaultAsync<RefreshToken>(sql, parameters, ct);
 	}
 
 	public Task SetUsedAsync(Guid tokenId, CancellationToken ct)
@@ -43,7 +43,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		return _db.SaveData(sql, parameters, ct);
+		return _db.ExecuteAsync(sql, parameters, ct);
 	}
 
 	public Task InvalidateAsync(Guid tokenId, CancellationToken ct)
@@ -52,7 +52,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
  		
  		var parameters = new DynamicParameters(new { tokenId });
  		
-		return _db.SaveData(sql, parameters, ct);
+		return _db.ExecuteAsync(sql, parameters, ct);
 	}
 
 	public Task InvalidateAllAsync(Guid userId, CancellationToken ct)
@@ -61,6 +61,6 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
  		var parameters = new DynamicParameters(new { userId });
 		
-		return _db.SaveData(sql, parameters, ct);
+		return _db.ExecuteAsync(sql, parameters, ct);
 	}
 }
