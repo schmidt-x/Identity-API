@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading;
@@ -223,9 +222,9 @@ public class AuthService : IAuthService
 			return AuthResultFail("refreshToken", "Invalid refresh token");
 		}
 		
-		var user = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
+		var userPrincipal = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
 		
-		if (user == null)
+		if (userPrincipal == null)
 		{
 			return AuthResultFail("accessToken", "Invalid access token");
 		}
@@ -258,7 +257,7 @@ public class AuthService : IAuthService
 		}
 		
 		await _tokenRepo.SetUsedAsync(refreshTokenId, ct);
-		var email = user.Claims.Single(x => x.Type == ClaimTypes.Email).Value;
+		var email = userPrincipal.FindFirstValue(ClaimTypes.Email)!;
 		
 		return AuthResultSuccess(refreshToken.UserId, email);
 	}
@@ -325,7 +324,7 @@ public class AuthService : IAuthService
 		new() { Errors = new() { { key, errors } } };
 	
 	private static AuthenticationResult AuthResultSuccess(Guid userId, string email) =>
-		new() { Succeeded = true, User = new() { Id = userId, Email = email } };
+		new() { Succeeded = true, Claims = new() { Id = userId, Email = email } };
 	
 	private static ResultEmpty ResultEmptyFail(string key, params string[] errors) =>
 		new() { Errors = new() { { key, errors } } };

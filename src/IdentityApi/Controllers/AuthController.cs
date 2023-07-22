@@ -93,14 +93,14 @@ public class AuthController : ControllerBase
 	{
 		var id = (string) HttpContext.Items["sessionID"]!;
 		
-		var authenticationResult = await _authService.RegisterAsync(id, userRegistration, ct);
+		var result = await _authService.RegisterAsync(id, userRegistration, ct);
 		
-		if (!authenticationResult.Succeeded)
+		if (!result.Succeeded)
 		{
-			return BadRequest(new FailResponse { Errors = authenticationResult.Errors });
+			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		var tokens = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
+		var tokens = await _authService.GenerateTokensAsync(result.Claims, ct);
 		
 		Response.Cookies.Delete("session_id");
 		
@@ -124,14 +124,14 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 401)]
 	public async Task<IActionResult> Login(UserLogin userLogin, CancellationToken ct)
 	{
-		var authenticationResult = await _authService.AuthenticateAsync(userLogin, ct);
+		var result = await _authService.AuthenticateAsync(userLogin, ct);
 		
-		if (!authenticationResult.Succeeded)
+		if (!result.Succeeded)
 		{
-			return Unauthorized(new FailResponse { Errors = authenticationResult.Errors });
+			return Unauthorized(new FailResponse { Errors = result.Errors });
 		}
 		
-		var tokens = await _authService.GenerateTokensAsync(authenticationResult.User, ct);
+		var tokens = await _authService.GenerateTokensAsync(result.Claims, ct);
 		
 		return Ok(new AuthSuccessResponse
 		{
@@ -153,14 +153,14 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 401)]
 	public async Task<IActionResult> RefreshToken(TokenRefreshing tokensRequest, CancellationToken ct)
 	{
-		var validationResult = await _authService.ValidateTokensAsync(tokensRequest, ct);
+		var result = await _authService.ValidateTokensAsync(tokensRequest, ct);
 		
-		if (!validationResult.Succeeded)
+		if (!result.Succeeded)
 		{
-			return Unauthorized(new FailResponse { Errors = validationResult.Errors });
+			return Unauthorized(new FailResponse { Errors = result.Errors });
 		}
 		
-		var tokens = await _authService.GenerateTokensAsync(validationResult.User, ct);
+		var tokens = await _authService.GenerateTokensAsync(result.Claims, ct);
 		
 		return Ok(new AuthSuccessResponse
 		{
