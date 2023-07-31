@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Security;
 using System.Security.Claims;
+using System.Security.Principal;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityApi.Services;
 
@@ -19,16 +19,21 @@ public class UserContext : IUserContext
 	
 	public Guid GetId()
 	{
+		if (!IsAuthenticated(_ctx.User.Identity))
+		{
+			throw new Exception("User is not authenticated");
+		}
+		
 		var rawId = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 		
 		if (rawId == null)
 		{
-			throw new SecurityTokenException("User claim 'sub' is not present");
+			throw new SecurityException("User claim 'sub' is not present");
 		}
 		
 		if (!Guid.TryParse(rawId, out var userId))
 		{
-			throw new SecurityTokenException("User claim 'sub' is not valid");
+			throw new SecurityException("User claim 'sub' is not valid");
 		}
 		
 		return userId;
@@ -36,6 +41,11 @@ public class UserContext : IUserContext
 	
 	public string GetEmail()
 	{
+		if (!IsAuthenticated(_ctx.User.Identity))
+		{
+			throw new Exception("User is not authenticated");
+		}
+		
 		var email = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Email);
 		
 		if (email is null)
@@ -45,4 +55,26 @@ public class UserContext : IUserContext
 		
 		return email;
 	}
+	
+	public string GetToken()
+	{
+		var identity = _ctx.User.Identity;
+		
+		if (!IsAuthenticated(identity))
+		{
+			throw new Exception("User is not authenticated");
+		}
+		
+		var authScheme = identity!.AuthenticationType;
+		
+		var token = authScheme switch
+		{
+			"Bearer" => _ctx.Request.Headers.Authorization.ToString()["Bearer ".Length..],
+			_ => throw new NotImplementedException(),
+		};
+		
+		return token;
+	}
+	
+	private static bool IsAuthenticated(IIdentity? identity) => identity is { IsAuthenticated: true } ;
 }
