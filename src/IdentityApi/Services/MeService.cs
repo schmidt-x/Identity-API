@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using IdentityApi.Contracts.DTOs;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Models;
+using IdentityApi.Responses;
 using IdentityApi.Results;
 
 namespace IdentityApi.Services;
@@ -31,31 +32,50 @@ public class MeService : IMeService
 	}
 	
 	
-	public Task<UserProfile> GetAsync(CancellationToken ct)
+	public async Task<Me> GetAsync(CancellationToken ct)
 	{
 		var userId = _userCtx.GetId();
+		var profile = await _userRepo.GetProfileAsync(userId, ct);
 		
-		return _userRepo.GetProfileAsync(userId, ct);
+		return new Me
+		{
+			Username = profile.Username,
+			Email = profile.Email,
+			CreatedAt = profile.CreatedAt,
+			UpdatedAt = profile.UpdatedAt,
+			Role = profile.Role,
+			Token = _userCtx.GetToken()
+		};
 	}
 
-	public async Task<Result<UserProfile>> UpdateUsernameAsync(UsernameUpdate update, CancellationToken ct)
+	public async Task<Result<Me>> UpdateUsernameAsync(UsernameUpdate update, CancellationToken ct)
 	{
 		var id = _userCtx.GetId();
 		var user = (await _userRepo.GetAsync(id, ct))!;
 		
 		if (update.Username == user.Username)
 		{
-			return ResultFail<UserProfile>("username", "Username cannot be the same");
+			return ResultFail<Me>("username", "Username cannot be the same");
 		}
 		
 		if (!_passwordService.VerifyPassword(update.Password, user.PasswordHash))
 		{
-			return ResultFail<UserProfile>("password", "Password is not correct");
+			return ResultFail<Me>("password", "Password is not correct");
 		}
 		
 		var profile = await _userRepo.UpdateUsernameAsync(id, update.Username, ct);
 		
-		return ResultSuccess(profile);
+		var me = new Me
+		{
+			Username = profile.Username,
+			Email = profile.Email,
+			CreatedAt = profile.CreatedAt,
+			UpdatedAt = profile.UpdatedAt,
+			Role = profile.Role,
+			Token = _userCtx.GetToken()
+		};
+		
+		return ResultSuccess(me);
 	}
 
 	public string CreateEmailUpdateSession()
@@ -140,25 +160,25 @@ public class MeService : IMeService
 		return ResultSuccess(verificationCode);
 	}
 
-	public async Task<Result<UserProfile>> VerifyAndUpdateNewEmailAsync(string verificationCode, CancellationToken ct)
+	public async Task<Result<Me>> UpdateEmailAsync(string verificationCode, CancellationToken ct)
 	{
 		var userId = _userCtx.GetId();
 		var userIdAsString = userId.ToString();
 		
 		if (!_cacheService.TryGetValue<UserSession>(userIdAsString, out var session))
 		{
-			return ResultFail<UserProfile>("session", "No session was found");
+			return ResultFail<Me>("session", "No session was found");
 		}
 		
 		if (session!.IsVerified == false) // checks if old email is verified
 		{
-			return ResultFail<UserProfile>("email", "Old email address is not verified");
+			return ResultFail<Me>("email", "Old email address is not verified");
 		}
 		
 		if (session.VerificationCode != verificationCode)
 		{
 			var attempts = ++session.Attempts;
-			var result = ResultFail<UserProfile>("code", AttemptsErrors(attempts));
+			var result = ResultFail<Me>("code", AttemptsErrors(attempts));
 			
 			if (attempts >= 3)
 			{
@@ -170,9 +190,19 @@ public class MeService : IMeService
 		
 		var profile = await _userRepo.UpdateEmailAsync(userId, session.EmailAddress, ct);
 		
+		var me = new Me
+		{
+			Username = profile.Username,
+			Email = profile.Email,
+			CreatedAt = profile.CreatedAt,
+			UpdatedAt = profile.UpdatedAt,
+			Role = profile.Role,
+			Token = _userCtx.GetToken()
+		};
+		
 		_cacheService.Remove(userIdAsString);
 		
-		return ResultSuccess(profile);
+		return ResultSuccess(me);
 	}
 	
 	

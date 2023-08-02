@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Contracts.DTOs;
@@ -18,17 +19,19 @@ public class MeController : ControllerBase
 {
 	private readonly IMeService _meService;
 	private readonly IEmailService _emailService;
+	private readonly IAuthService _authService;
 
-	public MeController(IMeService meService, IEmailService emailService)
+	public MeController(IMeService meService, IEmailService emailService, IAuthService authService)
 	{
 		_meService = meService;
 		_emailService = emailService;
+		_authService = authService;
 	}
 	
 	/// <summary>
-	/// Gets profile
+	/// Gets Me
 	/// </summary>
-	/// <response code="200">User profile is returned</response>
+	/// <response code="200">Me is returned</response>
 	[ProducesResponseType(typeof(UserProfile), 200)]
 	[HttpGet("profile")]
 	public async Task<IActionResult> GetProfile(CancellationToken ct)
@@ -59,7 +62,7 @@ public class MeController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Sends verification code to old email address
+	/// Sends verification code to the old email address
 	/// </summary>
 	/// <response code="200">Verification code is sent</response>
 	[HttpPost("email-update")]
@@ -96,9 +99,9 @@ public class MeController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Registers new email address
+	/// Registers new email address and send verification code
 	/// </summary>
-	/// <response code="200">Email is registered</response> 
+	/// <response code="200">Email is registered and verification code is sent</response> 
 	/// <response code="400">Validation failed</response> 
 	[HttpPost("email-update/register-new-email")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
@@ -120,23 +123,26 @@ public class MeController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Verifies and updates new email address
+	/// Updates email address
 	/// </summary>
-	/// <response code="200">Email is updated and profile is returned</response> 
+	/// <response code="200">Email address is updated</response> 
 	/// <response code="400">Verification failed</response>
 	[HttpPut("email-update/verify-new-email")]
 	[ProducesResponseType(typeof(UserProfile), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> VerifyAndUpdateNewEmail(CodeVerification code, CancellationToken ct)
+	public async Task<IActionResult> UpdateEmail(CodeVerification code, CancellationToken ct)
 	{
-		var verificatoinResult = await _meService.VerifyAndUpdateNewEmailAsync(code.Code, ct);
+		var result = await _meService.UpdateEmailAsync(code.Code, ct);
 		
-		if (!verificatoinResult.Succeeded)
+		if (!result.Succeeded)
 		{
-			return BadRequest(new FailResponse { Errors = verificatoinResult.Errors });
+			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		return Ok(verificatoinResult.Value);
+		var me = result.Value;
+		me.Token = _authService.UpdateAccessTokenEmail(me.Token, me.Email);
+		
+		return Ok(me);
 	}
 	
 }
