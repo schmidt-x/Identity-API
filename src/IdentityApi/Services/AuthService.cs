@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -262,6 +264,48 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(refreshToken.UserId, email);
 	}
 	
+	// Since the user's email address is stored in Jwt token, on 'ChangeEmail' action
+	// we need to either re-issue new access token,
+	// or just replace the claim value and recompute the signature.
+	// This method does the second one
+	public string UpdateAccessTokenEmail(string oldToken, string newEmail)
+	{
+		var jwtSecurityToken = new JwtSecurityTokenHandler().ReadJwtToken(oldToken);
+		var jwtClaims = jwtSecurityToken.Payload;
+		
+		jwtClaims[JwtRegisteredClaimNames.Email] = newEmail;
+		
+		object secondsNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+		jwtClaims[JwtRegisteredClaimNames.Iat] = secondsNow;
+		jwtClaims[JwtRegisteredClaimNames.Nbf] = secondsNow;
+		
+		// I don't know how to name the part that consists of Header and Payload
+		var newSomething = $"{jwtSecurityToken.EncodedHeader}.{jwtSecurityToken.EncodedPayload}";
+		var jwtHeader = JwtHeader.Base64UrlDeserialize(oldToken.Split('.', 2)[0]);
+		
+		var newToken = newSomething + '.' + jwtHeader.Alg switch
+		{
+			"HS256" => ComputeHashHS256(_jwt.SecretKey, newSomething),
+			_ => throw new NotImplementedException()
+		};
+		
+		return newToken;
+	}
+	
+	
+	/// <summary>
+	/// Computes the HMAC-SHA256 hash of the given value using the provided secret key
+	/// </summary>
+	/// <param name="secretKey">Secret key used for hashing algorithm</param>
+	/// <param name="value">Value to hash</param>
+	/// <returns>Hashed value encoded to Base64Url string</returns>
+	private static string ComputeHashHS256(string secretKey, string value)
+	{
+		var sha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey));
+		var newSignature = sha256.ComputeHash(Encoding.UTF8.GetBytes(value));
+		
+		return Base64UrlEncoder.Encode(newSignature);
+	}
 	
 	private static (string key, string error) GetSqlUQConstraintMessage(SqlException ex)
 	{
