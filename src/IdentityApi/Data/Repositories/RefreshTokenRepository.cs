@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +62,19 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 	public Task UpdateJtiAsync(Guid oldJti, Guid newJti, CancellationToken ct)
 	{
 		const string sql = "UPDATE RefreshToken SET jti = @newJti WHERE jti = @oldJti";
+		
+		var parameters = new DynamicParameters(new { oldJti, newJti });
+		
+		return _db.ExecuteAsync(sql, parameters, ct);
+	}
+	
+	public Task UpdateJtiAndSetValidAsync(Guid oldJti, Guid newJti, CancellationToken ct)
+	{
+		const string sql = """
+			UPDATE RefreshToken
+			SET jti = @newJti, invalidated = 0
+			WHERE jti = @oldJti
+		""";
 		
 		var parameters = new DynamicParameters(new { oldJti, newJti });
 		
