@@ -8,13 +8,16 @@ namespace IdentityApi.Data.Repositories;
 
 public interface IUserRepository
 {
-	Task<bool> EmailExistsAsync(string email, CancellationToken ct = default);
-	Task<bool> UsernameExistsAsync(string username, CancellationToken ct = default);
-	Task SaveAsync(User user, CancellationToken ct = default);
-	Task<User?> GetAsync(string email, CancellationToken ct = default);
-	Task<User?> GetAsync(Guid id, CancellationToken ct = default);
-	Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct = default);
-	Task<string> GetRoleAsync(Guid id, CancellationToken ct = default);
-	Task<UserProfile> UpdateUsernameAsync(Guid id, string username, CancellationToken ct = default);
-	Task<UserProfile> UpdateEmailAsync(Guid id, string email, CancellationToken ct = default);
+	Task<bool> EmailExistsAsync(string email, CancellationToken ct);
+	Task<bool> UsernameExistsAsync(string username, CancellationToken ct);
+	Task SaveAsync(User user, CancellationToken ct);
+	Task<User?> GetAsync(string email, CancellationToken ct);
+	Task<User?> GetAsync(Guid id, CancellationToken ct);
+	Task<User> GetRequiredAsync(Guid id, CancellationToken ct);
+	Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct);
+	Task<string> GetRoleAsync(Guid id, CancellationToken ct);
+	Task<string> GetPasswordHashAsync(Guid id, CancellationToken ct);
+	Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct);
+	Task<UserProfile> ChangeEmailAsync(Guid id, string email, CancellationToken ct);
+	public Task<UserProfile> ChangePasswordAsync(Guid id, string password, CancellationToken ct);
 }

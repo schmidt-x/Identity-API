@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using IdentityApi.Contracts.DTOs;
 using IdentityApi.Data.DataAccess;
 using IdentityApi.Models;
 
@@ -18,7 +17,7 @@ public class UserRepository : IUserRepository
 	}
 	
 	
-	public Task<bool> EmailExistsAsync(string email, CancellationToken ct = default)
+	public Task<bool> EmailExistsAsync(string email, CancellationToken ct)
 	{
 		const string sql = "SELECT IIF(exists(SELECT 1 FROM [User] WHERE email = @email), 1, 0)";
 		
@@ -27,7 +26,7 @@ public class UserRepository : IUserRepository
 		return _db.QueryScalarAsync<bool>(sql, parameters, ct);
 	}
 	
-	public Task<bool> UsernameExistsAsync(string username, CancellationToken ct = default)
+	public Task<bool> UsernameExistsAsync(string username, CancellationToken ct)
 	{
 		const string sql = "SELECT IIF(exists(SELECT 1 FROM [User] WHERE username = @username), 1, 0)";
 		
@@ -36,7 +35,7 @@ public class UserRepository : IUserRepository
 		return _db.QueryScalarAsync<bool>(sql, parameters, ct);
 	}
 
-	public Task SaveAsync(User user, CancellationToken ct = default)
+	public Task SaveAsync(User user, CancellationToken ct)
 	{
 		const string sql = """
 			INSERT INTO [User] (id, username, email, password_hash, created_at, updated_at, role)
@@ -48,7 +47,7 @@ public class UserRepository : IUserRepository
 		return _db.ExecuteAsync(sql, parameters, ct);
 	}
 	
-	public Task<User?> GetAsync(string email, CancellationToken ct = default)
+	public Task<User?> GetAsync(string email, CancellationToken ct)
 	{
 		const string sql = "SELECT * FROM [User] WHERE email = @email";
 		
@@ -57,7 +56,7 @@ public class UserRepository : IUserRepository
 		return _db.QuerySingleOrDefaultAsync<User>(sql, parameters, ct);
 	}
 	
-	public Task<User?> GetAsync(Guid id, CancellationToken ct = default)
+	public Task<User?> GetAsync(Guid id, CancellationToken ct)
 	{
 		const string sql = "SELECT * FROM [User] WHERE id = @id";
 		
@@ -66,7 +65,16 @@ public class UserRepository : IUserRepository
 		return _db.QuerySingleOrDefaultAsync<User>(sql, parameters, ct);
 	}
 	
-	public Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct = default)
+	public Task<User> GetRequiredAsync(Guid id, CancellationToken ct)
+	{
+		const string sql = "SELECT * FROM [User] WHERE id = @id";
+		
+		var parameters = new DynamicParameters(new { id });
+		
+		return _db.QuerySingleAsync<User>(sql, parameters, ct);
+	}
+	
+	public Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct)
 	{
 		const string sql = """
 			SELECT username, email, created_at, updated_at, role
@@ -78,7 +86,7 @@ public class UserRepository : IUserRepository
 		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
 	}
 
-	public Task<string> GetRoleAsync(Guid id, CancellationToken ct = default)
+	public Task<string> GetRoleAsync(Guid id, CancellationToken ct)
 	{
 		const string sql = "SELECT role FROM [User] WHERE id = @id";
 		
@@ -87,7 +95,16 @@ public class UserRepository : IUserRepository
 		return _db.QueryScalarAsync<string>(sql, parameters, ct);
 	}
 	
-	public Task<UserProfile> UpdateUsernameAsync(Guid id, string username, CancellationToken ct = default)
+	public Task<string> GetPasswordHashAsync(Guid id, CancellationToken ct)
+	{
+		const string sql = "SELECT password_hash FROM [User] WHERE id = @id";
+		
+		var parameters = new DynamicParameters(new { id });
+		
+		return _db.QueryScalarAsync<string>(sql, parameters, ct);
+	}
+	
+	public Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct)
 	{
 		const string sql = """
 			UPDATE [User]
@@ -103,7 +120,7 @@ public class UserRepository : IUserRepository
 		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
 	}
 
-	public Task<UserProfile> UpdateEmailAsync(Guid id, string email, CancellationToken ct = default)
+	public Task<UserProfile> ChangeEmailAsync(Guid id, string email, CancellationToken ct)
 	{
 		const string sql = """
 			UPDATE [User]
@@ -118,4 +135,21 @@ public class UserRepository : IUserRepository
 		
 		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
 	}
+	
+	public Task<UserProfile> ChangePasswordAsync(Guid id, string password, CancellationToken ct)
+	{
+		const string sql = """
+			UPDATE [User] 
+			SET password_hash = @password, updated_at = GETUTCDATE() 
+			WHERE id = @id
+			
+			SELECT username, email, created_at, updated_at, role
+			FROM [User] WHERE id = @id
+		""";
+		
+		var parameters = new DynamicParameters(new { id, password });
+		
+		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
+	}
+	
 }
