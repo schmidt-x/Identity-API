@@ -15,10 +15,6 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 			.NotEmpty().WithMessage("Password is required")
 			.MinimumLength(8).WithMessage("Password must contain at least 8 characters")
 			.Custom(ValidatePassword);
-		
-		RuleFor(x => x.ConfirmPassword)
-			.NotEmpty().WithMessage("Password confirmation is required")
-			.Equal(user => user.Password).WithMessage("Passwords do not match");
 	}
 
 	private static void ValidatePassword(string? password, ValidationContext<UserRegistration> context)
