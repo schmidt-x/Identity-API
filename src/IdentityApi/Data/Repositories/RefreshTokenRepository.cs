@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -46,20 +48,23 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		return _db.ExecuteAsync(sql, parameters, ct);
 	}
 
-	public Task InvalidateAsync(Guid tokenId, CancellationToken ct)
+	public Task<IEnumerable<string>> InvalidateAllAsync(Guid userId, CancellationToken ct)
 	{
-		const string sql = "UPDATE RefreshToken SET invalidated = 1 WHERE id = @tokenId";
- 		
- 		var parameters = new DynamicParameters(new { tokenId });
- 		
-		return _db.ExecuteAsync(sql, parameters, ct);
-	}
-
-	public Task InvalidateAllAsync(Guid userId, CancellationToken ct)
-	{
-		const string sql = "UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @userId";
+		const string sql = """
+			UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @userId
+			SELECT jti FROM RefreshToken WHERE user_id = @userId
+		""";
 		
  		var parameters = new DynamicParameters(new { userId });
+		
+		return _db.QueryAsync<string>(sql, parameters, ct);
+	}
+	
+	public Task UpdateJtiAsync(Guid oldJti, Guid newJti, CancellationToken ct)
+	{
+		const string sql = "UPDATE RefreshToken SET jti = @newJti WHERE jti = @oldJti";
+		
+		var parameters = new DynamicParameters(new { oldJti, newJti });
 		
 		return _db.ExecuteAsync(sql, parameters, ct);
 	}
