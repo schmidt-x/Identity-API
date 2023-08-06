@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace IdentityApi.Contracts.DTOs;
+namespace IdentityApi.Models;
 
 public class UserProfile
 {

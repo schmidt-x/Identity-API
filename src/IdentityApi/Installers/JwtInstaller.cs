@@ -70,7 +70,7 @@ public static class JwtInstaller
 						
 						var userId = Guid.Parse(user.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
 						var userRepo = ctx.RequestServices.GetRequiredService<IUserRepository>();
-						var userRole = await userRepo.GetRoleAsync(userId);
+						var userRole = await userRepo.GetRoleAsync(userId, default);
 						
 						var claims = user.Claims.Append(new Claim("role", userRole));
 						var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
