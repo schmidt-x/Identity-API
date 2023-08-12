@@ -104,7 +104,7 @@ public class UserRepository : IUserRepository
 		return _db.LoadScalarAsync<string>(sql, parameters, ct);
 	}
 	
-	public Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct)
+	public Task<UserProfile> UpdateUsernameAsync(Guid id, string username, CancellationToken ct)
 	{
 		const string sql = """
 			UPDATE [User]
@@ -120,7 +120,7 @@ public class UserRepository : IUserRepository
 		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 
-	public Task<UserProfile> ChangeEmailAsync(Guid id, string email, CancellationToken ct)
+	public Task<UserProfile> UpdateEmailAsync(Guid id, string email, CancellationToken ct)
 	{
 		const string sql = """
 			UPDATE [User]
@@ -136,7 +136,7 @@ public class UserRepository : IUserRepository
 		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 	
-	public Task<UserProfile> ChangePasswordAsync(Guid id, string password, CancellationToken ct)
+	public Task<UserProfile> UpdatePasswordAsync(Guid id, string password, CancellationToken ct)
 	{
 		const string sql = """
 			UPDATE [User] 

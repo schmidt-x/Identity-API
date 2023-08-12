@@ -17,6 +17,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		_db = db;
 	}
 
+
 	public Task SaveAsync(RefreshToken refreshToken, CancellationToken ct)
 	{
 		const string sql = """

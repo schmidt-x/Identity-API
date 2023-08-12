@@ -17,7 +17,7 @@ public interface IUserRepository
 	Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct);
 	Task<string> GetRoleAsync(Guid id, CancellationToken ct);
 	Task<string> GetPasswordHashAsync(Guid id, CancellationToken ct);
-	Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct);
-	Task<UserProfile> ChangeEmailAsync(Guid id, string email, CancellationToken ct);
-	public Task<UserProfile> ChangePasswordAsync(Guid id, string password, CancellationToken ct);
+	Task<UserProfile> UpdateUsernameAsync(Guid id, string username, CancellationToken ct);
+	Task<UserProfile> UpdateEmailAsync(Guid id, string email, CancellationToken ct);
+	Task<UserProfile> UpdatePasswordAsync(Guid id, string password, CancellationToken ct);
 }

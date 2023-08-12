@@ -52,7 +52,8 @@ public static class ServiceCollectionExtentions
 			.AddScoped<IUserContext, UserContext>()
 			.AddScoped<ICacheService, CacheService>()
 			.AddScoped<ICodeGenerationService, CodeGenerationService>()
-			.AddScoped<IMeService, MeService>();
+			.AddScoped<IMeService, MeService>()
+			.AddScoped<IJwtService, JwtService>();
 	}
 	
 	public static IServiceCollection AddFilters(this IServiceCollection services)
