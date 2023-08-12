@@ -21,35 +21,35 @@ public class SqlDataAccess : ISqlDataAccess
 		new SqlConnection(_connStrings.Mssql);
 	
 	
-	public async Task<IEnumerable<TResult>> QueryAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	public async Task<IEnumerable<TResult>> LoadAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.QueryAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 	
-	public async Task<TResult> QuerySingleAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	public async Task<TResult> LoadSingleAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.QuerySingleAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 	
-	public async Task<TResult?> QuerySingleOrDefaultAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	public async Task<TResult?> LoadSingleOrDefaultAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.QuerySingleOrDefaultAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 	
-	public async Task<TResult> QueryScalarAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	public async Task<TResult> LoadScalarAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
 		await using var cnn = GetConnection();
 		
 		return await cnn.ExecuteScalarAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
 	}
 
-	public async Task ExecuteAsync(string sql, DynamicParameters parameters, CancellationToken ct = default)
+	public async Task ExecuteAsync(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
 		await using var cnn = GetConnection();
 		

@@ -23,7 +23,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { email });
 		
-		return _db.QueryScalarAsync<bool>(sql, parameters, ct);
+		return _db.LoadScalarAsync<bool>(sql, parameters, ct);
 	}
 	
 	public Task<bool> UsernameExistsAsync(string username, CancellationToken ct)
@@ -32,7 +32,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { username });
 		
-		return _db.QueryScalarAsync<bool>(sql, parameters, ct);
+		return _db.LoadScalarAsync<bool>(sql, parameters, ct);
 	}
 
 	public Task SaveAsync(User user, CancellationToken ct)
@@ -53,7 +53,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { email });
 		
-		return _db.QuerySingleOrDefaultAsync<User>(sql, parameters, ct);
+		return _db.LoadSingleOrDefaultAsync<User>(sql, parameters, ct);
 	}
 	
 	public Task<User?> GetAsync(Guid id, CancellationToken ct)
@@ -62,7 +62,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id });
 		
-		return _db.QuerySingleOrDefaultAsync<User>(sql, parameters, ct);
+		return _db.LoadSingleOrDefaultAsync<User>(sql, parameters, ct);
 	}
 	
 	public Task<User> GetRequiredAsync(Guid id, CancellationToken ct)
@@ -71,7 +71,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id });
 		
-		return _db.QuerySingleAsync<User>(sql, parameters, ct);
+		return _db.LoadSingleAsync<User>(sql, parameters, ct);
 	}
 	
 	public Task<UserProfile> GetProfileAsync(Guid id, CancellationToken ct)
@@ -83,7 +83,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id });
 		
-		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
+		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 
 	public Task<string> GetRoleAsync(Guid id, CancellationToken ct)
@@ -92,7 +92,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id });
 		
-		return _db.QueryScalarAsync<string>(sql, parameters, ct);
+		return _db.LoadScalarAsync<string>(sql, parameters, ct);
 	}
 	
 	public Task<string> GetPasswordHashAsync(Guid id, CancellationToken ct)
@@ -101,7 +101,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id });
 		
-		return _db.QueryScalarAsync<string>(sql, parameters, ct);
+		return _db.LoadScalarAsync<string>(sql, parameters, ct);
 	}
 	
 	public Task<UserProfile> ChangeUsernameAsync(Guid id, string username, CancellationToken ct)
@@ -117,7 +117,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id, username });
 		
-		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
+		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 
 	public Task<UserProfile> ChangeEmailAsync(Guid id, string email, CancellationToken ct)
@@ -133,7 +133,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id, email });
 		
-		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
+		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 	
 	public Task<UserProfile> ChangePasswordAsync(Guid id, string password, CancellationToken ct)
@@ -149,7 +149,7 @@ public class UserRepository : IUserRepository
 		
 		var parameters = new DynamicParameters(new { id, password });
 		
-		return _db.QuerySingleAsync<UserProfile>(sql, parameters, ct);
+		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 	
 }

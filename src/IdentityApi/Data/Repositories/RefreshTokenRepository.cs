@@ -35,7 +35,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		return _db.QuerySingleOrDefaultAsync<RefreshToken>(sql, parameters, ct);
+		return _db.LoadSingleOrDefaultAsync<RefreshToken>(sql, parameters, ct);
 	}
 
 	public Task SetUsedAsync(Guid tokenId, CancellationToken ct)
@@ -56,7 +56,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		
  		var parameters = new DynamicParameters(new { userId });
 		
-		return _db.QueryAsync<string>(sql, parameters, ct);
+		return _db.LoadAsync<string>(sql, parameters, ct);
 	}
 	
 	public Task UpdateJtiAsync(Guid oldJti, Guid newJti, CancellationToken ct)
