@@ -7,4 +7,5 @@ public interface IUserContext
 	Guid GetId();
 	string GetEmail();
 	string GetToken();
+	Guid GetJti();
 }

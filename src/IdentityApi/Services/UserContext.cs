@@ -19,10 +19,7 @@ public class UserContext : IUserContext
 	
 	public Guid GetId()
 	{
-		if (!IsAuthenticated(_ctx.User.Identity))
-		{
-			throw new Exception("User is not authenticated");
-		}
+		ThrowIfNotAuthenticated();
 		
 		var rawId = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 		
@@ -41,10 +38,7 @@ public class UserContext : IUserContext
 	
 	public string GetEmail()
 	{
-		if (!IsAuthenticated(_ctx.User.Identity))
-		{
-			throw new Exception("User is not authenticated");
-		}
+		ThrowIfNotAuthenticated();
 		
 		var email = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Email);
 		
@@ -58,14 +52,9 @@ public class UserContext : IUserContext
 	
 	public string GetToken()
 	{
-		var identity = _ctx.User.Identity;
+		ThrowIfNotAuthenticated();
 		
-		if (!IsAuthenticated(identity))
-		{
-			throw new Exception("User is not authenticated");
-		}
-		
-		var authScheme = identity!.AuthenticationType;
+		var authScheme = _ctx.User.Identity!.AuthenticationType;
 		
 		var token = authScheme switch
 		{
@@ -74,6 +63,31 @@ public class UserContext : IUserContext
 		};
 		
 		return token;
+	}
+	
+	public Guid GetJti()
+	{
+		ThrowIfNotAuthenticated();
+		
+		var rawJti = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Jti);
+		
+		if (string.IsNullOrEmpty(rawJti))
+		{
+			throw new SecurityException("User claim 'jti' is not present");
+		}
+		
+		if (!Guid.TryParse(rawJti, out var jti))
+		{
+			throw new SecurityException("User claim 'jti' is not valid");
+		}
+		
+		return jti;
+	}
+	
+	private void ThrowIfNotAuthenticated()
+	{
+		if (!IsAuthenticated(_ctx.User.Identity))
+			throw new Exception("User is not authenticated");
 	}
 	
 	private static bool IsAuthenticated(IIdentity? identity) => identity is { IsAuthenticated: true } ;
