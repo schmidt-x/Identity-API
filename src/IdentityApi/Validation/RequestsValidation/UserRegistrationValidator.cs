@@ -25,25 +25,28 @@ public class UserRegistrationRequestValidator : AbstractValidator<UserRegistrati
 		
 		if (string.IsNullOrWhiteSpace(password)) return;
 				
-		var letter = false;
-		var digit = false;
-		var symbol = false;
-		var lower = false;
-		var upper = false;
-			
+		var hasLetter = false;
+		var hasDigit = false;
+		var hasSymbol = false;
+		var hasLower = false;
+		var hasUpper = false;
+		var hasSpace = false;
+		
 		foreach(var l in password)
 		{
-			if (char.IsLetter(l)) letter = true;
-			if (char.IsDigit(l)) digit = true;
-			if (char.IsPunctuation(l) || char.IsSymbol(l)) symbol = true;
-			if (char.IsLower(l)) lower = true;
-			if (char.IsUpper(l)) upper = true;
+			if (!hasLetter) hasLetter = char.IsLetter(l);
+			if (!hasDigit) hasDigit = char.IsDigit(l);
+			if (!hasSymbol) hasSymbol = char.IsSymbol(l) || char.IsPunctuation(l);
+			if (!hasLower) hasLower = char.IsLower(l);
+			if (!hasUpper) hasUpper = char.IsUpper(l);
+			if (!hasSpace) hasSpace = char.IsWhiteSpace(l);
 		}
 				
-		if(!letter) context.AddFailure("Password must contain at least one letter");
-		if(!digit) context.AddFailure("Password must contain at least one digit");
-		if(!symbol) context.AddFailure("Password must contain at least one symbol");
-		if(!lower) context.AddFailure("Password must contain at least one lower-case character");
-		if(!upper) context.AddFailure("Password must contain at least one upper-case character");
+		if(!hasLetter) context.AddFailure("Password must contain at least one letter");
+		if(!hasDigit) context.AddFailure("Password must contain at least one digit");
+		if(!hasSymbol) context.AddFailure("Password must contain at least one symbol");
+		if(!hasLower) context.AddFailure("Password must contain at least one lower-case character");
+		if(!hasUpper) context.AddFailure("Password must contain at least one upper-case character");
+		if(hasSpace) context.AddFailure("Password must not contain any white spaces");
 	}
 }
