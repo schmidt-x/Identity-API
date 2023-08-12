@@ -5,11 +5,10 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using IdentityApi.Contracts.DTOs;
+using IdentityApi.Contracts.Requests;
 using IdentityApi.Contracts.Options;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Extensions;
-// using IdentityApi.Extensions;
 using IdentityApi.Models;
 using IdentityApi.Results;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -104,7 +103,7 @@ public class AuthService : IAuthService
 		return ResultEmptySuccess();
 	}
 	
-	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistration userRegistration, CancellationToken ct)
+	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest userRegistrationRequest, CancellationToken ct)
 	{
 		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
 		{
@@ -116,17 +115,17 @@ public class AuthService : IAuthService
 			return AuthResultFail("email", "Email address is not verified");
 		}
 		
-		if (await _userRepo.UsernameExistsAsync(userRegistration.Username, ct))
+		if (await _userRepo.UsernameExistsAsync(userRegistrationRequest.Username, ct))
 		{
-			return AuthResultFail("username", $"Username '{userRegistration.Username}' is already taken");
+			return AuthResultFail("username", $"Username '{userRegistrationRequest.Username}' is already taken");
 		}
 		
 		var timeNow = DateTime.UtcNow;
 		var user = new User
 		{
 			Id = Guid.NewGuid(),
-			Username = userRegistration.Username,
-			PasswordHash = _passwordService.HashPassword(userRegistration.Password),
+			Username = userRegistrationRequest.Username,
+			PasswordHash = _passwordService.HashPassword(userRegistrationRequest.Password),
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
@@ -208,11 +207,11 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	public async Task<AuthenticationResult> AuthenticateAsync(UserLogin userLogin, CancellationToken ct)
+	public async Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest userLoginRequest, CancellationToken ct)
 	{
-		var user = await _userRepo.GetAsync(userLogin.Login, ct);
+		var user = await _userRepo.GetAsync(userLoginRequest.Login, ct);
 		
-		if (user == null || !_passwordService.VerifyPassword(userLogin.Password, user.PasswordHash))
+		if (user == null || !_passwordService.VerifyPassword(userLoginRequest.Password, user.PasswordHash))
 		{
 			return AuthResultFail("user", "Incorrect login/password");
 		}
@@ -220,7 +219,7 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(user.Id, user.Email);
 	}
 	
-	public async Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshing tokens, CancellationToken ct)
+	public async Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshingRequest tokens, CancellationToken ct)
 	{
 		if (!Guid.TryParse(tokens.RefreshToken, out var refreshTokenId))
 		{

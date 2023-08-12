@@ -1,11 +1,11 @@
 ﻿using FluentValidation;
-using IdentityApi.Contracts.DTOs;
+using IdentityApi.Contracts.Requests;
 
-namespace IdentityApi.Validation.DTOValidation;
+namespace IdentityApi.Validation.RequestsValidation;
 
-public class UserRegisterValidator : AbstractValidator<UserRegistration>
+public class UserRegistrationRequestValidator : AbstractValidator<UserRegistrationRequest>
 {
-	public UserRegisterValidator()
+	public UserRegistrationRequestValidator()
 	{
 		RuleFor(x => x.Username)
 			.NotEmpty().WithMessage("Username is required")
@@ -17,7 +17,7 @@ public class UserRegisterValidator : AbstractValidator<UserRegistration>
 			.Custom(ValidatePassword);
 	}
 
-	private static void ValidatePassword(string? password, ValidationContext<UserRegistration> context)
+	private static void ValidatePassword(string? password, ValidationContext<UserRegistrationRequest> context)
 	{
 		// the reason why I didn't handle 'Not empty' and 'MinimumLength' requirements here
 		// is that the method 'AddFluentValidationRulesToSwagger' does not detect 'Custom' restrictions

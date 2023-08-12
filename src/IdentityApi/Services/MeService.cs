@@ -1,16 +1,10 @@
 ﻿using System;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using IdentityApi.Contracts.DTOs;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Models;
 using IdentityApi.Responses;
 using IdentityApi.Results;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityApi.Services;
 
@@ -59,22 +53,22 @@ public class MeService : IMeService
 		};
 	}
 
-	public async Task<Result<Me>> UpdateUsernameAsync(UsernameUpdate update, CancellationToken ct)
+	public async Task<Result<Me>> UpdateUsernameAsync(string newUsername, string password, CancellationToken ct)
 	{
 		var id = _userCtx.GetId();
-		var user = (await _userRepo.GetAsync(id, ct))!;
+		var user = await _userRepo.GetRequiredAsync(id, ct); // do I really need the whole entity?
 		
-		if (update.Username == user.Username)
+		if (newUsername == user.Username)
 		{
 			return ResultFail<Me>("username", "Username cannot be the same");
 		}
 		
-		if (!_passwordService.VerifyPassword(update.Password, user.PasswordHash))
+		if (!_passwordService.VerifyPassword(password, user.PasswordHash))
 		{
 			return ResultFail<Me>("password", "Password is not correct");
 		}
 		
-		var profile = await _userRepo.UpdateUsernameAsync(id, update.Username, ct);
+		var profile = await _userRepo.UpdateUsernameAsync(id, newUsername, ct);
 		
 		var me = new Me
 		{
@@ -223,17 +217,17 @@ public class MeService : IMeService
 		return ResultSuccess(me);
 	}
 	
-	public async Task<Result<Me>> UpdatePasswordAsync(PasswordChangeRequest passwords, CancellationToken ct)
+	public async Task<Result<Me>> UpdatePasswordAsync(string password, string newPassword, CancellationToken ct)
 	{
 		var userId = _userCtx.GetId();
 		var passwordHash = await _userRepo.GetPasswordHashAsync(userId, ct);
 		
-		if (!_passwordService.VerifyPassword(passwords.Password, passwordHash))
+		if (!_passwordService.VerifyPassword(password, passwordHash))
 		{
 			return ResultFail<Me>("password", "Password is not correct");
 		}
 		
-		var newPasswordHash = _passwordService.HashPassword(passwords.NewPassword);
+		var newPasswordHash = _passwordService.HashPassword(newPassword);
 		
 		var profile = await _userRepo.UpdatePasswordAsync(userId, newPasswordHash, ct);
 		await _tokenRepo.InvalidateAllAsync(userId, ct);

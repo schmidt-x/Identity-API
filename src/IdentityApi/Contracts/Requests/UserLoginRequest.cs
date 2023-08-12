@@ -1,6 +1,6 @@
-﻿namespace IdentityApi.Contracts.DTOs;
+﻿namespace IdentityApi.Contracts.Requests;
 
-public class UserLogin
+public class UserLoginRequest
 {
 	public string Login { get; set; } = default!;
 	public string Password { get; set; } = default!;

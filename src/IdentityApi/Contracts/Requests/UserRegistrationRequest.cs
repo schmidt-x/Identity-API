@@ -1,6 +1,6 @@
-﻿namespace IdentityApi.Contracts.DTOs;
+﻿namespace IdentityApi.Contracts.Requests;
 
-public class UserRegistration
+public class UserRegistrationRequest
 {
 	public string Username { get; set; } = default!;
 	public string Password { get; set; } = default!;

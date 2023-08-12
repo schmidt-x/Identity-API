@@ -1,11 +1,11 @@
 ﻿using FluentValidation;
-using IdentityApi.Contracts.DTOs;
+using IdentityApi.Contracts.Requests;
 
-namespace IdentityApi.Validation.DTOValidation;
+namespace IdentityApi.Validation.RequestsValidation;
 
-public class PasswordChangeRequestValidator : AbstractValidator<PasswordChangeRequest>
+public class PasswordUpdateRequestValidator : AbstractValidator<PasswordUpdateRequest>
 {
-	public PasswordChangeRequestValidator()
+	public PasswordUpdateRequestValidator()
 	{
 		RuleFor(x => x.Password)
 			.NotEmpty().WithMessage("Password is required");

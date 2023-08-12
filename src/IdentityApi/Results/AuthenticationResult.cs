@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using IdentityApi.Contracts.DTOs;
 using IdentityApi.Models;
 
 namespace IdentityApi.Results;

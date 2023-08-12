@@ -1,6 +1,6 @@
-﻿namespace IdentityApi.Contracts.DTOs;
+﻿namespace IdentityApi.Contracts.Requests;
 
-public class UsernameUpdate
+public class UsernameUpdateRequest
 {
 	public string Username { get; set; } = default!;
 	public string Password { get; set; } = default!;

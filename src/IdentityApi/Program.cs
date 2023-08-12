@@ -26,8 +26,9 @@ public class Program
 		builder.Services.AddDataAccess();
 		builder.Services.AddServices();
 		
-		builder.AddJwtAuthentication();
-		builder.Services.AddAuthorizationWithPolicies();
+		builder
+			.AddJwtAuthentication()
+			.AddAuthorizationWithPolicies();
 		
 		builder.AddFluentMigrator();
 		

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using IdentityApi.Contracts.DTOs;
 using IdentityApi.Models;
 
 namespace IdentityApi.Data.Repositories;

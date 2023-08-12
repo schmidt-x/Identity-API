@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using IdentityApi.Contracts.DTOs;
+using IdentityApi.Contracts.Requests;
 using IdentityApi.Filters;
 using IdentityApi.Responses;
 using IdentityApi.Services;
@@ -34,14 +34,14 @@ public class AuthController : ControllerBase
 	[HttpPost("registration")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> CreateSession(EmailAddress emailAddress, CancellationToken ct)
+	public async Task<IActionResult> CreateSession(EmailUpdateRequest emailUpdateRequest, CancellationToken ct)
 	{
-		var sessionResult = await _authService.CreateSessionAsync(emailAddress.Email, ct);
+		var sessionResult = await _authService.CreateSessionAsync(emailUpdateRequest.Email, ct);
 		
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		var _ = _emailService.SendAsync(emailAddress.Email, sessionResult.VerificationCode);
+		var _ = _emailService.SendAsync(emailUpdateRequest.Email, sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
 			"session_id",
@@ -66,11 +66,11 @@ public class AuthController : ControllerBase
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public IActionResult VerifyEmail(CodeVerification codeVerification)
+	public IActionResult VerifyEmail(CodeVerificationRequest codeVerificationRequest)
 	{
 		var id = (string) HttpContext.Items["sessionID"]!;
 		
-		var sessionResult = _authService.VerifyEmail(id, codeVerification.Code);
+		var sessionResult = _authService.VerifyEmail(id, codeVerificationRequest.Code);
 		
 		if (!sessionResult.Succeeded)
 		{
@@ -89,11 +89,11 @@ public class AuthController : ControllerBase
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> Register(UserRegistration userRegistration, CancellationToken ct)
+	public async Task<IActionResult> Register(UserRegistrationRequest userRegistrationRequest, CancellationToken ct)
 	{
 		var id = (string) HttpContext.Items["sessionID"]!;
 		
-		var result = await _authService.RegisterAsync(id, userRegistration, ct);
+		var result = await _authService.RegisterAsync(id, userRegistrationRequest, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -122,9 +122,9 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	[ProducesResponseType(typeof(FailResponse), 401)]
-	public async Task<IActionResult> Login(UserLogin userLogin, CancellationToken ct)
+	public async Task<IActionResult> Login(UserLoginRequest userLoginRequest, CancellationToken ct)
 	{
-		var result = await _authService.AuthenticateAsync(userLogin, ct);
+		var result = await _authService.AuthenticateAsync(userLoginRequest, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -151,7 +151,7 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	[ProducesResponseType(typeof(FailResponse), 401)]
-	public async Task<IActionResult> RefreshToken(TokenRefreshing tokensRequest, CancellationToken ct)
+	public async Task<IActionResult> RefreshToken(TokenRefreshingRequest tokensRequest, CancellationToken ct)
 	{
 		var result = await _authService.ValidateTokensAsync(tokensRequest, ct);
 		

@@ -10,7 +10,7 @@ namespace IdentityApi.Extensions;
 
 public static class ServiceCollectionExtentions
 {
-	public static IServiceCollection AddAuthorizationWithPolicies(this IServiceCollection services)
+	public static IServiceCollection AddAuthorizationWithPolicies(this IServiceCollection services) // TODO move to the JWTintstaller class
 	{
 		services.AddAuthorization(o =>
 		{

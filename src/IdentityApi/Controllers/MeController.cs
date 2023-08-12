@@ -1,13 +1,11 @@
-﻿using System;
-using System.Security.Claims;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using IdentityApi.Contracts.DTOs;
+using IdentityApi.Extensions;
 using IdentityApi.Responses;
 using IdentityApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.JsonWebTokens;
+using IdentityApi.Contracts.Requests;
 
 namespace IdentityApi.Controllers;
 
@@ -46,10 +44,10 @@ public class MeController : ControllerBase
 	/// <response code="400">Username is already taken or validation failed</response>
 	[ProducesResponseType(typeof(Me), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	[HttpPut("username-update")]
-	public async Task<IActionResult> UpdateUsername(UsernameUpdate update, CancellationToken ct)
+	[HttpPatch("username-update")]
+	public async Task<IActionResult> UpdateUsername(UsernameUpdateRequest usernameRequest, CancellationToken ct)
 	{
-		var result = await _meService.UpdateUsernameAsync(update, ct);
+		var result = await _meService.UpdateUsernameAsync(usernameRequest.Username, usernameRequest.Password, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -65,13 +63,11 @@ public class MeController : ControllerBase
 	/// <response code="200">Verification code is sent</response>
 	[HttpPost("email-update")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
-	public IActionResult CreateEmailUpdateSession()
+	public IActionResult StartEmailUpdatingProcess()
 	{
 		var verificationCode = _meService.CreateEmailUpdateSession();
 		
-		var userEmail = HttpContext.User.FindFirstValue(JwtRegisteredClaimNames.Email)!;
-		
-		var _ = _emailService.SendAsync(userEmail, verificationCode);
+		var _ = _emailService.SendAsync(HttpContext.User.FindEmail()!, verificationCode);
 		
 		return Ok(new MessageResponse { Message = "Verification code is sent to your old email" });
 	}
@@ -81,12 +77,12 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Old email address is verified</response>
 	/// <response code="400">Verification failed</response>
-	[HttpPost("email-update/verify-old-email")]
+	[HttpPatch("email-update/verify-old-email")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public IActionResult VerifyOldEmail(CodeVerification code)
+	public IActionResult VerifyOldEmail(CodeVerificationRequest codeRequest)
 	{
-		var result = _meService.VerifyOldEmail(code.Code);
+		var result = _meService.VerifyOldEmail(codeRequest.Code);
 		
 		if (!result.Succeeded)
 		{
@@ -101,21 +97,19 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Email is registered and verification code is sent</response> 
 	/// <response code="400">Validation failed</response> 
-	[HttpPost("email-update/register-new-email")]
+	[HttpPatch("email-update/register-new-email")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> RegisterNewEmail(EmailAddress email, CancellationToken ct)
+	public async Task<IActionResult> RegisterNewEmail(EmailUpdateRequest emailRequest, CancellationToken ct)
 	{
-		var result = await _meService.CacheNewEmailAsync(email.Email, ct);
+		var result = await _meService.CacheNewEmailAsync(emailRequest.Email, ct);
 		
 		if (!result.Succeeded)
 		{
 			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		var userEmail = HttpContext.User.FindFirstValue(JwtRegisteredClaimNames.Email)!;
-		
-		var _ = _emailService.SendAsync(userEmail, result.Value);
+		var _ = _emailService.SendAsync(emailRequest.Email, result.Value);
 		
 		return Ok(new MessageResponse { Message = "Verification code is sent to your new email" });
 	}
@@ -125,10 +119,10 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Email address is updated</response> 
 	/// <response code="400">Verification failed</response>
-	[HttpPut("email-update/verify-new-email")]
+	[HttpPatch("email-update/verify-new-email")]
 	[ProducesResponseType(typeof(Me), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> UpdateEmail(CodeVerification code, CancellationToken ct)
+	public async Task<IActionResult> UpdateEmail(CodeVerificationRequest code, CancellationToken ct)
 	{
 		var result = await _meService.UpdateEmailAsync(code.Code, ct);
 		
@@ -145,12 +139,12 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Password is updated</response> 
 	/// <response code="400">Verification failed</response>
-	[HttpPut("password-change")]
+	[HttpPatch("password-change")]
 	[ProducesResponseType(typeof(Me), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> UpdatePassword(PasswordChangeRequest password, CancellationToken ct)
+	public async Task<IActionResult> UpdatePassword(PasswordUpdateRequest passwordRequest, CancellationToken ct)
 	{
-		var result = await _meService.UpdatePasswordAsync(password, ct);
+		var result = await _meService.UpdatePasswordAsync(passwordRequest.Password, passwordRequest.NewPassword, ct);
 		
 		if (!result.Succeeded)
 		{

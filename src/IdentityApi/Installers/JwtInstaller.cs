@@ -7,6 +7,7 @@ using IdentityApi.Data.Repositories;
 using IdentityApi.Responses;
 using IdentityApi.Validation.OptionsValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -93,6 +94,24 @@ public static class JwtInstaller
 					
 				};
 			});
+		
+		return builder;
+	}
+	
+	public static WebApplicationBuilder AddAuthorizationWithPolicies(this WebApplicationBuilder builder)
+	{
+		builder.Services.AddAuthorization(o =>
+		{
+			o.FallbackPolicy = new AuthorizationPolicyBuilder()
+				.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+				.RequireAuthenticatedUser()
+				.Build();
+				
+			o.AddPolicy("user", b =>
+			{
+				b.RequireClaim("role", "user");
+			});
+		});
 		
 		return builder;
 	}

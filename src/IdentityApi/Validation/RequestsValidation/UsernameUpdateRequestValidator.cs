@@ -1,11 +1,11 @@
 ﻿using FluentValidation;
-using IdentityApi.Contracts.DTOs;
+using IdentityApi.Contracts.Requests;
 
-namespace IdentityApi.Validation.DTOValidation;
+namespace IdentityApi.Validation.RequestsValidation;
 
-public class UsernameUpdateValidator : AbstractValidator<UsernameUpdate>
+public class UsernameUpdateRequestValidator : AbstractValidator<UsernameUpdateRequest>
 {
-	public UsernameUpdateValidator()
+	public UsernameUpdateRequestValidator()
 	{
 		RuleFor(x => x.Username)
 			.NotEmpty().WithMessage("Username is required")
