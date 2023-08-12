@@ -7,17 +7,17 @@ namespace IdentityApi.Services;
 
 public class CodeGenerationService : ICodeGenerationService
 {
-	private readonly VerificationCodeOptions _codeOptions;
+	private readonly VerificationCodeOptions _code;
 
 	public CodeGenerationService(IOptions<VerificationCodeOptions> codeOptions)
 	{
-		_codeOptions = codeOptions.Value;
+		_code = codeOptions.Value;
 	}
 	
 	public string Generate()
 	{
 		return new string(Enumerable
-			.Repeat(_codeOptions.Text, _codeOptions.Length)
+			.Repeat(_code.Text, _code.Length)
 			.Select(x => x[Random.Shared.Next(x.Length)])
 			.ToArray());
 	}

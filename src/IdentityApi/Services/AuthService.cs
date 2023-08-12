@@ -1,15 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Contracts.DTOs;
 using IdentityApi.Contracts.Options;
 using IdentityApi.Data.Repositories;
+using IdentityApi.Extensions;
+// using IdentityApi.Extensions;
 using IdentityApi.Models;
 using IdentityApi.Results;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -139,20 +139,23 @@ public class AuthService : IAuthService
 		}
 		catch(SqlException ex) when (ex.Number == 2627) // in case if 'Race condition' occurs
 		{
-			var result = GetSqlUQConstraintMessage(ex);
-
-			result.error = result.key switch
+			var column = GetViolatedColumnName(ex);
+			var error = string.Empty;
+			
+			switch(column)
 			{
-				// error has a placeholder 'Username/Email address '{0}' is already taken' 
-				"username" => string.Format(result.error, user.Username),
-				"email" => string.Format(result.error, user.Email),
-				_ => result.error
-			};
+				case "username":
+					error = $"Username '{user.Username}' is already taken";
+					break;
+				case "email":
+					error = $"Email address '{user.Email}' is already taken";
+					
+					// remove session from the cache, so the user would have to restart the session
+					_cacheService.Remove(sessionId);
+					break;
+			}
 			
-			// TODO if race condition occured and it's email,
-			// invalidate the cache so the user would start new registration session
-			
-			return AuthResultFail(result.key, result.error);
+			return AuthResultFail(column, error);
 		}
 		
 		_cacheService.Remove(sessionId);
@@ -248,12 +251,12 @@ public class AuthService : IAuthService
 			return AuthResultFail("refreshToken", "Refresh token has already been used");
 		}
 		
-		if (refreshToken.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+		if (refreshToken.ExpiresAt < DateTime.UtcNow.GetTotalSeconds())
 		{
 			return AuthResultFail("refreshToken", "Refresh token has been expired");
 		}
 		
-		if (refreshToken.Jti != securityToken!.Id)
+		if (!refreshToken.Jti.Equals(securityToken!.Id, StringComparison.InvariantCultureIgnoreCase))
 		{
 			return AuthResultFail("accessToken", "Tokens do not match");
 		}
@@ -264,50 +267,7 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(refreshToken.UserId, email);
 	}
 	
-	// Since the user's email address is stored in Jwt token, on 'ChangeEmail' action
-	// we need to either re-issue new access token,
-	// or just replace the claim value and recompute the signature.
-	// This method does the second one
-	public string UpdateAccessTokenEmail(string oldToken, string newEmail)
-	{
-		var jwtSecurityToken = new JwtSecurityTokenHandler().ReadJwtToken(oldToken);
-		var jwtClaims = jwtSecurityToken.Payload;
-		
-		jwtClaims[JwtRegisteredClaimNames.Email] = newEmail;
-		
-		object secondsNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-		jwtClaims[JwtRegisteredClaimNames.Iat] = secondsNow;
-		jwtClaims[JwtRegisteredClaimNames.Nbf] = secondsNow;
-		
-		// I don't know how to name the part that consists of Header and Payload
-		var newSomething = $"{jwtSecurityToken.EncodedHeader}.{jwtSecurityToken.EncodedPayload}";
-		var jwtHeader = JwtHeader.Base64UrlDeserialize(oldToken.Split('.', 2)[0]);
-		
-		var newToken = newSomething + '.' + jwtHeader.Alg switch
-		{
-			"HS256" => ComputeHashHS256(_jwt.SecretKey, newSomething),
-			_ => throw new NotImplementedException()
-		};
-		
-		return newToken;
-	}
-	
-	
-	/// <summary>
-	/// Computes the HMAC-SHA256 hash of the given value using the provided secret key
-	/// </summary>
-	/// <param name="secretKey">Secret key used for hashing algorithm</param>
-	/// <param name="value">Value to hash</param>
-	/// <returns>Hashed value encoded to Base64Url string</returns>
-	private static string ComputeHashHS256(string secretKey, string value)
-	{
-		var sha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey));
-		var newSignature = sha256.ComputeHash(Encoding.UTF8.GetBytes(value));
-		
-		return Base64UrlEncoder.Encode(newSignature);
-	}
-	
-	private static (string key, string error) GetSqlUQConstraintMessage(SqlException ex)
+	private static string GetViolatedColumnName(SqlException ex)
 	{
 		var message = ex.Message;
 		const int startIndex = 36;
@@ -318,16 +278,11 @@ public class AuthService : IAuthService
 		// constraint name template is 'Constraint_Table_column'
 		// for example 'UQ_User_email' or 'UQ_User_username'
 		var parts = constraint.Split('_');
-		var key = parts[2];
+		var column = parts[2];
 		
-		var error = key switch
-		{
-			"email" => "Email address '{0}' is already taken",
-			"username" => "Username '{0}' is already taken",
-			_ => throw new ArgumentException($"Unexpected column name: '{key}'") 
-		};
+		// TODO log 
 		
-		return (key, error);
+		return column;
 	}
 	
 	private ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out SecurityToken? securityToken)

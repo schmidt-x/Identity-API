@@ -14,4 +14,5 @@ public interface IMeService
 	ResultEmpty VerifyOldEmail(string verificationCode);
 	Task<Result<string>> CacheNewEmailAsync(string newEmail, CancellationToken ct);
 	Task<Result<Me>> UpdateEmailAsync(string verificationCode, CancellationToken ct);
+	Task<Result<Me>> UpdatePasswordAsync(PasswordChangeRequest passwords, CancellationToken ct);
 }

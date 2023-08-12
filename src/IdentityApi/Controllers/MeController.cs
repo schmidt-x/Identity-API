@@ -19,22 +19,20 @@ public class MeController : ControllerBase
 {
 	private readonly IMeService _meService;
 	private readonly IEmailService _emailService;
-	private readonly IAuthService _authService;
 
-	public MeController(IMeService meService, IEmailService emailService, IAuthService authService)
+	public MeController(IMeService meService, IEmailService emailService)
 	{
 		_meService = meService;
 		_emailService = emailService;
-		_authService = authService;
 	}
 	
 	/// <summary>
-	/// Gets Me
+	/// Returns Me
 	/// </summary>
 	/// <response code="200">Me is returned</response>
-	[ProducesResponseType(typeof(UserProfile), 200)]
-	[HttpGet("profile")]
-	public async Task<IActionResult> GetProfile(CancellationToken ct)
+	[ProducesResponseType(typeof(Me), 200)]
+	[HttpGet]
+	public async Task<IActionResult> GetMe(CancellationToken ct)
 	{
 		var me = await _meService.GetAsync(ct);
 		
@@ -46,7 +44,7 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Username is updated</response>
 	/// <response code="400">Username is already taken or validation failed</response>
-	[ProducesResponseType(typeof(UserProfile), 200)]
+	[ProducesResponseType(typeof(Me), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	[HttpPut("username-update")]
 	public async Task<IActionResult> UpdateUsername(UsernameUpdate update, CancellationToken ct)
@@ -88,11 +86,11 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public IActionResult VerifyOldEmail(CodeVerification code)
 	{
-		var verificationResult = _meService.VerifyOldEmail(code.Code);
+		var result = _meService.VerifyOldEmail(code.Code);
 		
-		if (!verificationResult.Succeeded)
+		if (!result.Succeeded)
 		{
-			return BadRequest(new FailResponse { Errors = verificationResult.Errors });
+			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
 		return Ok(new MessageResponse { Message = "Old email has successfully been verified"});
@@ -108,16 +106,16 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> RegisterNewEmail(EmailAddress email, CancellationToken ct)
 	{
-		var validationResult = await _meService.CacheNewEmailAsync(email.Email, ct);
+		var result = await _meService.CacheNewEmailAsync(email.Email, ct);
 		
-		if (!validationResult.Succeeded)
+		if (!result.Succeeded)
 		{
-			return BadRequest(new FailResponse { Errors = validationResult.Errors });
+			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
 		var userEmail = HttpContext.User.FindFirstValue(JwtRegisteredClaimNames.Email)!;
 		
-		var _ = _emailService.SendAsync(userEmail, validationResult.Value);
+		var _ = _emailService.SendAsync(userEmail, result.Value);
 		
 		return Ok(new MessageResponse { Message = "Verification code is sent to your new email" });
 	}
@@ -128,7 +126,7 @@ public class MeController : ControllerBase
 	/// <response code="200">Email address is updated</response> 
 	/// <response code="400">Verification failed</response>
 	[HttpPut("email-update/verify-new-email")]
-	[ProducesResponseType(typeof(UserProfile), 200)]
+	[ProducesResponseType(typeof(Me), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> UpdateEmail(CodeVerification code, CancellationToken ct)
 	{
@@ -139,10 +137,26 @@ public class MeController : ControllerBase
 			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		var me = result.Value;
-		me.Token = _authService.UpdateAccessTokenEmail(me.Token, me.Email);
-		
-		return Ok(me);
+		return Ok(result.Value);
 	}
 	
+	/// <summary>
+	/// Updates password
+	/// </summary>
+	/// <response code="200">Password is updated</response> 
+	/// <response code="400">Verification failed</response>
+	[HttpPut("password-change")]
+	[ProducesResponseType(typeof(Me), 200)]
+	[ProducesResponseType(typeof(FailResponse), 400)]
+	public async Task<IActionResult> UpdatePassword(PasswordChangeRequest password, CancellationToken ct)
+	{
+		var result = await _meService.UpdatePasswordAsync(password, ct);
+		
+		if (!result.Succeeded)
+		{
+			return BadRequest(new FailResponse { Errors = result.Errors });
+		}
+		
+		return Ok(result.Value);
+	}
 }

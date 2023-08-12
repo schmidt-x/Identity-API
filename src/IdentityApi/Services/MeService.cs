@@ -1,4 +1,7 @@
 ﻿using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Contracts.DTOs;
@@ -6,6 +9,8 @@ using IdentityApi.Data.Repositories;
 using IdentityApi.Models;
 using IdentityApi.Responses;
 using IdentityApi.Results;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityApi.Services;
 
@@ -16,19 +21,25 @@ public class MeService : IMeService
 	private readonly IPasswordService _passwordService;
 	private readonly ICodeGenerationService _codeService;
 	private readonly ICacheService _cacheService;
+	private readonly IRefreshTokenRepository _tokenRepo;
+	private readonly IJwtService _jwtService;
 
 	public MeService(
 		IUserRepository userRepo, 
 		IUserContext userCtx, 
 		IPasswordService passwordService,
 		ICodeGenerationService codeService, 
-		ICacheService cacheService)
+		ICacheService cacheService,
+		IRefreshTokenRepository tokenRepo,
+		IJwtService jwtService)
 	{
 		_userRepo = userRepo;
 		_userCtx = userCtx;
 		_passwordService = passwordService;
 		_codeService = codeService;
 		_cacheService = cacheService;
+		_tokenRepo = tokenRepo;
+		_jwtService = jwtService;
 	}
 	
 	
@@ -190,6 +201,13 @@ public class MeService : IMeService
 		
 		var profile = await _userRepo.UpdateEmailAsync(userId, session.EmailAddress, ct);
 		
+		var newJti = Guid.NewGuid();
+		await _tokenRepo.UpdateJtiAsync(_userCtx.GetJti(), newJti, ct);
+		
+		// _uow.SaveChangesAsync(); TODO implement UnitOfWork
+		
+		var newToken = _jwtService.UpdateToken(_userCtx.GetToken(), newJti, profile.Email);
+		
 		var me = new Me
 		{
 			Username = profile.Username,
@@ -197,10 +215,45 @@ public class MeService : IMeService
 			CreatedAt = profile.CreatedAt,
 			UpdatedAt = profile.UpdatedAt,
 			Role = profile.Role,
-			Token = _userCtx.GetToken()
+			Token = newToken
 		};
 		
 		_cacheService.Remove(userIdAsString);
+		
+		return ResultSuccess(me);
+	}
+	
+	public async Task<Result<Me>> UpdatePasswordAsync(PasswordChangeRequest passwords, CancellationToken ct)
+	{
+		var userId = _userCtx.GetId();
+		var passwordHash = await _userRepo.GetPasswordHashAsync(userId, ct);
+		
+		if (!_passwordService.VerifyPassword(passwords.Password, passwordHash))
+		{
+			return ResultFail<Me>("password", "Password is not correct");
+		}
+		
+		var newPasswordHash = _passwordService.HashPassword(passwords.NewPassword);
+		
+		var profile = await _userRepo.UpdatePasswordAsync(userId, newPasswordHash, ct);
+		await _tokenRepo.InvalidateAllAsync(userId, ct);
+		
+		var newJti = Guid.NewGuid();
+		await _tokenRepo.UpdateJtiAndSetValidAsync(_userCtx.GetJti(), newJti, ct);
+		
+		// _uow.SaveChangesAsync();
+		
+		var newToken = _jwtService.UpdateToken(_userCtx.GetToken(), newJti);
+		
+		var me = new Me
+		{
+			Username = profile.Username,
+			Email = profile.Email,
+			CreatedAt = profile.CreatedAt,
+			UpdatedAt = profile.UpdatedAt,
+			Role = profile.Role,
+			Token = newToken
+		};
 		
 		return ResultSuccess(me);
 	}
