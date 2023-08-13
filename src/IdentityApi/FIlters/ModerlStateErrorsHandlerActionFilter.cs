@@ -17,7 +17,7 @@ public class ModerlStateErrorsHandlerActionFilter : IAsyncActionFilter
 			
 			foreach(var (key, item) in context.ModelState)
 			{
-				errors[key] = item.Errors.Select(error => error.ErrorMessage).ToList();
+				errors.Add(key, item.Errors.Select(error => error.ErrorMessage).ToList());
 			}
 			
 			context.Result = new BadRequestObjectResult(new FailResponse { Errors = errors });
