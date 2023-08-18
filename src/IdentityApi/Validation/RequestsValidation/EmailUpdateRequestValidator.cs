@@ -3,7 +3,7 @@ using IdentityApi.Contracts.Requests;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
-public class EmailUpdateRequestValidator : AbstractValidator<EmailUpdateRequest>
+public class EmailUpdateRequestValidator : AbstractValidator<EmailRequest>
 {
 	public EmailUpdateRequestValidator()
 	{

@@ -17,7 +17,7 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 		{
 			context.Result = new BadRequestObjectResult(new FailResponse { Errors = new()
 			{
-				{ "sessionID", new[] { "Session ID is required" } }
+				{ "session", new[] { "Session ID is required" } }
 			}});
 			
 			return;

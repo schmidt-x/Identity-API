@@ -100,7 +100,7 @@ public class MeController : ControllerBase
 	[HttpPatch("email-update/register-new-email")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> RegisterNewEmail(EmailUpdateRequest emailRequest, CancellationToken ct)
+	public async Task<IActionResult> RegisterNewEmail(EmailRequest emailRequest, CancellationToken ct)
 	{
 		var result = await _meService.CacheNewEmailAsync(emailRequest.Email, ct);
 		

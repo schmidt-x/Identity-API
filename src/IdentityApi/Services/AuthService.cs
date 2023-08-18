@@ -261,7 +261,7 @@ public class AuthService : IAuthService
 		}
 		
 		await _tokenRepo.SetUsedAsync(refreshTokenId, ct);
-		var email = userPrincipal.FindFirstValue(ClaimTypes.Email)!;
+		var email = userPrincipal.FindEmail(true)!;
 		
 		return AuthResultSuccess(refreshToken.UserId, email);
 	}

@@ -34,14 +34,14 @@ public class AuthController : ControllerBase
 	[HttpPost("registration")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public async Task<IActionResult> CreateSession(EmailUpdateRequest emailUpdateRequest, CancellationToken ct)
+	public async Task<IActionResult> CreateSession(EmailRequest emailRequest, CancellationToken ct)
 	{
-		var sessionResult = await _authService.CreateSessionAsync(emailUpdateRequest.Email, ct);
+		var sessionResult = await _authService.CreateSessionAsync(emailRequest.Email, ct);
 		
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		var _ = _emailService.SendAsync(emailUpdateRequest.Email, sessionResult.VerificationCode);
+		var _ = _emailService.SendAsync(emailRequest.Email, sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
 			"session_id",

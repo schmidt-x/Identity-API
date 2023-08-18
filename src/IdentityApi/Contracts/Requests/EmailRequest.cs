@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.Contracts.Requests;
 
-public class EmailUpdateRequest
+public class EmailRequest
 {
 	public string Email { get; set; } = default!;
 }
