@@ -11,7 +11,6 @@ public static class DateTimeExtensions
 	/// <returns>The total number of seconds since the Unix epoch</returns>
 	public static long GetTotalSeconds(this DateTime now)
 	{
-		var start = new DateTime(1970, 1, 1, 0, 0, 0);
-		return (now.Ticks - start.Ticks) / 10_000_000;
+		return (now.Ticks - DateTime.UnixEpoch.Ticks) / 10_000_000;
 	}
 }

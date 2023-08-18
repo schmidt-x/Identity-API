@@ -16,12 +16,12 @@ namespace IdentityApi.Controllers;
 public class MeController : ControllerBase
 {
 	private readonly IMeService _meService;
-	private readonly IEmailService _emailService;
+	private readonly IEmailSender _emailSender;
 
-	public MeController(IMeService meService, IEmailService emailService)
+	public MeController(IMeService meService, IEmailSender emailSender)
 	{
 		_meService = meService;
-		_emailService = emailService;
+		_emailSender = emailSender;
 	}
 	
 	/// <summary>
@@ -67,7 +67,7 @@ public class MeController : ControllerBase
 	{
 		var verificationCode = _meService.CreateEmailUpdateSession();
 		
-		var _ = _emailService.SendAsync(HttpContext.User.FindEmail()!, verificationCode);
+		var _ = _emailSender.SendAsync(HttpContext.User.FindEmail()!, verificationCode);
 		
 		return Ok(new MessageResponse { Message = "Verification code is sent to your old email" });
 	}
@@ -109,7 +109,7 @@ public class MeController : ControllerBase
 			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		var _ = _emailService.SendAsync(emailRequest.Email, result.Value);
+		var _ = _emailSender.SendAsync(emailRequest.Email, result.Value);
 		
 		return Ok(new MessageResponse { Message = "Verification code is sent to your new email" });
 	}

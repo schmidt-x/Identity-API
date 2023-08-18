@@ -17,12 +17,12 @@ namespace IdentityApi.Controllers;
 public class AuthController : ControllerBase
 {
 	private readonly IAuthService _authService;
-	private readonly IEmailService _emailService;
+	private readonly IEmailSender _emailSender;
 
-	public AuthController(IAuthService authService, IEmailService emailService)
+	public AuthController(IAuthService authService, IEmailSender emailSender)
 	{
 		_authService = authService;
-		_emailService = emailService;
+		_emailSender = emailSender;
 	}
 	
 	
@@ -41,7 +41,7 @@ public class AuthController : ControllerBase
 		if (!sessionResult.Succeeded)
 			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		
-		var _ = _emailService.SendAsync(emailRequest.Email, sessionResult.VerificationCode);
+		var _ = _emailSender.SendAsync(emailRequest.Email, sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
 			"session_id",

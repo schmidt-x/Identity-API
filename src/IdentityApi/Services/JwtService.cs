@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
 using IdentityApi.Contracts.Options;
+using IdentityApi.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -30,7 +31,7 @@ public class JwtService : IJwtService
 		if (newEmail is not null)
 			payload[JwtRegisteredClaimNames.Email] = newEmail;
 		
-		object secondsNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+		object secondsNow = DateTime.UtcNow.GetTotalSeconds();
 
 		payload[JwtRegisteredClaimNames.Iat] = secondsNow;
 		payload[JwtRegisteredClaimNames.Nbf] = secondsNow;

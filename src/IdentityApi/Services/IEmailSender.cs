@@ -2,7 +2,7 @@
 
 namespace IdentityApi.Services;
 
-public interface IEmailService
+public interface IEmailSender
 {
 	Task SendAsync(string emailTo, string message);
 }

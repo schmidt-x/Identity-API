@@ -6,11 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Services;
 
-public class EmailService : IEmailService
+public class EmailSender : IEmailSender
 {
 	private readonly EmailOptions _email;
 	
-	public EmailService(IOptions<EmailOptions> options)
+	public EmailSender(IOptions<EmailOptions> options)
 	{
 		_email = options.Value;
 	}
