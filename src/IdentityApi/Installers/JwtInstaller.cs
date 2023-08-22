@@ -91,7 +91,6 @@ public static class JwtInstaller
 						
 						ctx.HandleResponse();
 					}
-					
 				};
 			});
 		

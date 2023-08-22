@@ -1,8 +1,10 @@
 ﻿using System.Reflection;
 using FluentMigrator.Runner;
+using IdentityApi.Contracts.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Installers;
 
@@ -15,7 +17,11 @@ public static class MigrationInstaller
 			.ConfigureRunner(mrb =>
 			{
 				mrb.AddSqlServer()
-					 .WithGlobalConnectionString(builder.Configuration.GetConnectionString("Mssql"))
+					 .WithGlobalConnectionString(sp =>
+					 {
+						 var cnnOptions = sp.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value;
+						 return cnnOptions.Mssql;
+					 })
 					 .ScanIn(Assembly.GetExecutingAssembly()).For
 					 .Migrations();
 			})
