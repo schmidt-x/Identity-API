@@ -1,33 +1,15 @@
 ﻿using IdentityApi.Data.DataAccess;
 using IdentityApi.Data.Repositories;
+using IdentityApi.Factories;
 using IdentityApi.Filters;
 using IdentityApi.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using System.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IdentityApi.Extensions;
 
 public static class ServiceCollectionExtentions
 {
-	public static IServiceCollection AddAuthorizationWithPolicies(this IServiceCollection services) // TODO move to the JWTintstaller class
-	{
-		services.AddAuthorization(o =>
-		{
-			o.FallbackPolicy = new AuthorizationPolicyBuilder()
-				.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-				.RequireAuthenticatedUser()
-				.Build();
-				
-			o.AddPolicy("user", b =>
-			{
-				b.RequireClaim("role", "user");
-			});
-		});
-		
-		return services;
-	}
-	
 	public static IServiceCollection AddDataAccess(this IServiceCollection services)
 	{
 		Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
@@ -40,7 +22,16 @@ public static class ServiceCollectionExtentions
 	{
 		return services
 			.AddScoped<IUserRepository, UserRepository>()
-			.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+			.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
+			.AddScoped<IUnitOfWork, UnitOfWork>();
+	}
+	
+	public static IServiceCollection AddTransactionFactory(this IServiceCollection services)
+	{
+		services.AddScoped<TransactionFactory>(sp => 
+			new TransactionFactory(sp.GetRequiredService<SqlConnection>()));
+		
+		return services;
 	}
 	
 	public static IServiceCollection AddServices(this IServiceCollection services)

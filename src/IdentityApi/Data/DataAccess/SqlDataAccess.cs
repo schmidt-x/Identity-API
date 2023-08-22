@@ -3,57 +3,57 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using IdentityApi.Contracts.Options;
-using Microsoft.Extensions.Options;
+using IdentityApi.Factories;
 
 namespace IdentityApi.Data.DataAccess;
 
 public class SqlDataAccess : ISqlDataAccess
 {
-	private readonly ConnectionStringsOptions _connStrings;
+	private readonly SqlConnection _cnn;
+	private readonly TransactionFactory _transactionFactory;
 	
-	public SqlDataAccess(IOptions<ConnectionStringsOptions> options)
+	public SqlDataAccess(TransactionFactory transactionFactory, SqlConnection cnn)
 	{
-		_connStrings = options.Value;
+		_transactionFactory = transactionFactory;
+		_cnn = cnn;
 	}
 	
-	private SqlConnection GetConnection() =>
-		new SqlConnection(_connStrings.Mssql);
+	private Task<SqlTransaction> GetTransactionAsync() => _transactionFactory.GetTransactionAsync();
 	
 	
 	public async Task<IEnumerable<TResult>> LoadAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
-		await using var cnn = GetConnection();
+		var transaction = await GetTransactionAsync();
 		
-		return await cnn.QueryAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
+		return await _cnn.QueryAsync<TResult>(new CommandDefinition(sql, parameters, transaction, cancellationToken: ct));
 	}
 	
 	public async Task<TResult> LoadSingleAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
-		await using var cnn = GetConnection();
+		var transaction = await GetTransactionAsync();
 		
-		return await cnn.QuerySingleAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
+		return await _cnn.QuerySingleAsync<TResult>(new CommandDefinition(sql, parameters, transaction, cancellationToken: ct));
 	}
 	
 	public async Task<TResult?> LoadSingleOrDefaultAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
-		await using var cnn = GetConnection();
+		var transaction = await GetTransactionAsync();
 		
-		return await cnn.QuerySingleOrDefaultAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
+		return await _cnn.QuerySingleOrDefaultAsync<TResult>(new CommandDefinition(sql, parameters, transaction, cancellationToken: ct));
 	}
 	
 	public async Task<TResult> LoadScalarAsync<TResult>(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
-		await using var cnn = GetConnection();
+		var transaction = await GetTransactionAsync();
 		
-		return await cnn.ExecuteScalarAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: ct));
+		return await _cnn.ExecuteScalarAsync<TResult>(new CommandDefinition(sql, parameters, transaction, cancellationToken: ct));
 	}
 
 	public async Task ExecuteAsync(string sql, DynamicParameters parameters, CancellationToken ct)
 	{
-		await using var cnn = GetConnection();
+		var transaction = await GetTransactionAsync();
 		
-		await cnn.ExecuteAsync(new CommandDefinition(sql, parameters, cancellationToken: ct));
+		await _cnn.ExecuteAsync(new CommandDefinition(sql, parameters, transaction, cancellationToken: ct));
 	}
 	
 }

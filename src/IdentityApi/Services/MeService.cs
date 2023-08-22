@@ -10,37 +10,33 @@ namespace IdentityApi.Services;
 
 public class MeService : IMeService
 {
-	private readonly IUserRepository _userRepo;
 	private readonly IUserContext _userCtx;
 	private readonly IPasswordService _passwordService;
 	private readonly ICodeGenerationService _codeService;
 	private readonly ICacheService _cacheService;
-	private readonly IRefreshTokenRepository _tokenRepo;
 	private readonly IJwtService _jwtService;
+	private readonly IUnitOfWork _uow;
 
 	public MeService(
-		IUserRepository userRepo, 
 		IUserContext userCtx, 
 		IPasswordService passwordService,
 		ICodeGenerationService codeService, 
 		ICacheService cacheService,
-		IRefreshTokenRepository tokenRepo,
-		IJwtService jwtService)
+		IJwtService jwtService,
+		IUnitOfWork uow)
 	{
-		_userRepo = userRepo;
 		_userCtx = userCtx;
 		_passwordService = passwordService;
 		_codeService = codeService;
 		_cacheService = cacheService;
-		_tokenRepo = tokenRepo;
 		_jwtService = jwtService;
+		_uow = uow;
 	}
 	
 	
 	public async Task<Me> GetAsync(CancellationToken ct)
 	{
-		var userId = _userCtx.GetId();
-		var profile = await _userRepo.GetProfileAsync(userId, ct);
+		var profile = await _uow.UserRepo.GetProfileAsync(_userCtx.GetId(), ct);
 		
 		return new Me
 		{
@@ -55,20 +51,31 @@ public class MeService : IMeService
 
 	public async Task<Result<Me>> UpdateUsernameAsync(string newUsername, string password, CancellationToken ct)
 	{
-		var id = _userCtx.GetId();
-		var user = await _userRepo.GetRequiredAsync(id, ct); // do I really need the whole entity?
-		
-		if (newUsername == user.Username)
+		if (await _uow.UserRepo.UsernameExistsAsync(newUsername, ct))
 		{
-			return ResultFail<Me>("username", "Username cannot be the same");
+			return ResultFail<Me>("username", $"Username '{newUsername}' is already taken");
 		}
+		
+		var id = _userCtx.GetId();
+		var user = await _uow.UserRepo.GetRequiredAsync(id, ct); // do I really need the whole entity?
 		
 		if (!_passwordService.VerifyPassword(password, user.PasswordHash))
 		{
 			return ResultFail<Me>("password", "Password is not correct");
 		}
 		
-		var profile = await _userRepo.UpdateUsernameAsync(id, newUsername, ct);
+		UserProfile profile;
+		try
+		{
+			profile = await _uow.UserRepo.UpdateUsernameAsync(id, newUsername, ct);
+			await _uow.SaveChangesAsync(ct);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(CancellationToken.None);
+			
+			throw;
+		}
 		
 		var me = new Me
 		{
@@ -101,7 +108,7 @@ public class MeService : IMeService
 		return verificationCode;
 	}
 	
-	public ResultEmpty VerifyOldEmail(string verificationCode)
+	public ResultEmpty VerifyEmail(string verificationCode)
 	{
 		var userId = _userCtx.GetId().ToString();
 		
@@ -112,7 +119,7 @@ public class MeService : IMeService
 		
 		if (session!.IsVerified)
 		{
-			return ResultEmptyFail("session", "Old email address is already verified");
+			return ResultEmptyFail("session", "Current email address is already verified");
 		}
 		
 		if (session.VerificationCode != verificationCode)
@@ -130,7 +137,7 @@ public class MeService : IMeService
 		
 		session.IsVerified = true;
 		// refresh the life-time
-		_cacheService.Refresh(userId, session, TimeSpan.FromMinutes(5));
+		_cacheService.Update(userId, session, TimeSpan.FromMinutes(5));
 		
 		return new ResultEmpty { Succeeded = true };
 	}
@@ -144,12 +151,12 @@ public class MeService : IMeService
 			return ResultFail<string>("session", "No session was found");
 		}
 		
-		if (session!.IsVerified == false) // checks if old email is verified
+		if (session!.IsVerified == false)
 		{
-			return ResultFail<string>("email", "Old email address is not verified");
+			return ResultFail<string>("email", "Current email address is not verified");
 		}
 		
-		if (await _userRepo.EmailExistsAsync(newEmail, ct))
+		if (await _uow.UserRepo.EmailExistsAsync(newEmail, ct))
 		{
 			return ResultFail<string>("email", $"Email address '{newEmail}' is already taken");
 		}
@@ -160,7 +167,7 @@ public class MeService : IMeService
 		session.VerificationCode = verificationCode;
 		session.Attempts = 0;
 		
-		_cacheService.Refresh(userId, session, TimeSpan.FromMinutes(5));
+		_cacheService.Update(userId, session, TimeSpan.FromMinutes(5));
 		
 		return ResultSuccess(verificationCode);
 	}
@@ -177,7 +184,7 @@ public class MeService : IMeService
 		
 		if (session!.IsVerified == false) // checks if old email is verified
 		{
-			return ResultFail<Me>("email", "Old email address is not verified");
+			return ResultFail<Me>("email", "Current email address is not verified");
 		}
 		
 		if (session.VerificationCode != verificationCode)
@@ -193,12 +200,29 @@ public class MeService : IMeService
 			return result;
 		}
 		
-		var profile = await _userRepo.UpdateEmailAsync(userId, session.EmailAddress, ct);
-		
+		UserProfile profile;
 		var newJti = Guid.NewGuid();
-		await _tokenRepo.UpdateJtiAsync(_userCtx.GetJti(), newJti, ct);
-		
-		// _uow.SaveChangesAsync(); TODO implement UnitOfWork
+		try
+		{
+			profile = await _uow.UserRepo.UpdateEmailAsync(userId, session.EmailAddress, ct);
+			
+			// Since email address is stored in Jwt, we will return a new Jwt with updated address in it.
+			// The old one (its jti) should be black-listed
+			// Also we will replace 'jti' in RefreshToken table to the new one (so that they match on token-refreshing)
+			
+			var currentJti = _userCtx.GetJti();
+			await _uow.TokenRepo.UpdateJtiAsync(currentJti, newJti, ct);
+			
+			// _tokenBlacklist.Add(currentJti);
+			
+			await _uow.SaveChangesAsync(ct);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(CancellationToken.None);
+			
+			throw;
+		}
 		
 		var newToken = _jwtService.UpdateToken(_userCtx.GetToken(), newJti, profile.Email);
 		
@@ -220,7 +244,7 @@ public class MeService : IMeService
 	public async Task<Result<Me>> UpdatePasswordAsync(string password, string newPassword, CancellationToken ct)
 	{
 		var userId = _userCtx.GetId();
-		var passwordHash = await _userRepo.GetPasswordHashAsync(userId, ct);
+		var passwordHash = await _uow.UserRepo.GetPasswordHashAsync(userId, ct);
 		
 		if (!_passwordService.VerifyPassword(password, passwordHash))
 		{
@@ -229,13 +253,28 @@ public class MeService : IMeService
 		
 		var newPasswordHash = _passwordService.HashPassword(newPassword);
 		
-		var profile = await _userRepo.UpdatePasswordAsync(userId, newPasswordHash, ct);
-		await _tokenRepo.InvalidateAllAsync(userId, ct);
-		
+		UserProfile profile;
 		var newJti = Guid.NewGuid();
-		await _tokenRepo.UpdateJtiAndSetValidAsync(_userCtx.GetJti(), newJti, ct);
 		
-		// _uow.SaveChangesAsync();
+		try
+		{
+			profile = await _uow.UserRepo.UpdatePasswordAsync(userId, newPasswordHash, ct);
+			
+			var jtis = await _uow.TokenRepo.InvalidateAllAsync(userId, ct);
+			// _tokenBlacklist.AddRange(jtis);
+			
+			// make valid the one, that is a pair of currently authenticated access token,
+			// so the user could still use it on token-refreshing
+			await _uow.TokenRepo.UpdateJtiAndSetValidAsync(_userCtx.GetJti(), newJti, ct);
+			
+			await _uow.SaveChangesAsync(ct);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(CancellationToken.None);
+			
+			throw;
+		}
 		
 		var newToken = _jwtService.UpdateToken(_userCtx.GetToken(), newJti);
 		

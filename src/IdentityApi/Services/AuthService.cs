@@ -19,25 +19,22 @@ namespace IdentityApi.Services;
 
 public class AuthService : IAuthService
 {
-	private readonly IUserRepository _userRepo;
-	private readonly IRefreshTokenRepository _tokenRepo;
 	private readonly ICacheService _cacheService;
 	private readonly TokenValidationParameters _tokenValidationParameters;
 	private readonly ICodeGenerationService _codeService;
 	private readonly JwtOptions _jwt;
 	private readonly IPasswordService _passwordService;
+	private readonly IUnitOfWork _uow;
 
 	public AuthService(
-		IUserRepository userRepo, 
-		IRefreshTokenRepository tokenRepo,
 		ICacheService cacheService,
 		IOptions<JwtOptions> jwtOptions,
 		TokenValidationParameters tokenValidationParameters,
 		ICodeGenerationService codeService,
-		IPasswordService passwordService)
+		IPasswordService passwordService,
+		IUnitOfWork uow)
 	{
-		_userRepo = userRepo;
-		_tokenRepo = tokenRepo;
+		_uow = uow;
 		_cacheService = cacheService;
 		_tokenValidationParameters = tokenValidationParameters;
 		_codeService = codeService;
@@ -48,14 +45,14 @@ public class AuthService : IAuthService
 	
 	public async Task<SessionResult> CreateSessionAsync(string email, CancellationToken ct)
 	{
-		if (await _userRepo.EmailExistsAsync(email, ct))
+		if (await _uow.UserRepo.EmailExistsAsync(email, ct))
 		{
 			return SessionResultFail("email", $"Email address '{email}' is already taken");
 		}
 		
 		string verificationCode = _codeService.Generate();
-		
 		var sessionId = Guid.NewGuid().ToString();
+		
 		var session = new UserSession
 		{
 			EmailAddress = email,
@@ -98,12 +95,12 @@ public class AuthService : IAuthService
 		}
 		
 		session.IsVerified = true;
-		_cacheService.Refresh(sessionId, session, TimeSpan.FromMinutes(5));
+		_cacheService.Update(sessionId, session, TimeSpan.FromMinutes(5));
 		
 		return ResultEmptySuccess();
 	}
 	
-	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest userRegistrationRequest, CancellationToken ct)
+	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct)
 	{
 		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
 		{
@@ -115,17 +112,17 @@ public class AuthService : IAuthService
 			return AuthResultFail("email", "Email address is not verified");
 		}
 		
-		if (await _userRepo.UsernameExistsAsync(userRegistrationRequest.Username, ct))
+		if (await _uow.UserRepo.UsernameExistsAsync(registrationRequest.Username, ct))
 		{
-			return AuthResultFail("username", $"Username '{userRegistrationRequest.Username}' is already taken");
+			return AuthResultFail("username", $"Username '{registrationRequest.Username}' is already taken");
 		}
 		
 		var timeNow = DateTime.UtcNow;
 		var user = new User
 		{
 			Id = Guid.NewGuid(),
-			Username = userRegistrationRequest.Username,
-			PasswordHash = _passwordService.HashPassword(userRegistrationRequest.Password),
+			Username = registrationRequest.Username,
+			PasswordHash = _passwordService.HashPassword(registrationRequest.Password),
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
@@ -134,10 +131,13 @@ public class AuthService : IAuthService
 		
 		try
 		{
-			await _userRepo.SaveAsync(user, ct);
+			await _uow.UserRepo.SaveAsync(user, ct);
+			await _uow.SaveChangesAsync(default);
 		}
 		catch(SqlException ex) when (ex.Number == 2627) // in case if 'Race condition' occurs
 		{
+			await _uow.UndoChangesAsync(default);
+			
 			var column = GetViolatedColumnName(ex);
 			var error = string.Empty;
 			
@@ -186,19 +186,29 @@ public class AuthService : IAuthService
 		
 		var securityToken = handler.CreateToken(descriptor);
 		
-		var timeNow = DateTimeOffset.UtcNow;
+		var timeNow = DateTime.UtcNow;
 		var refreshToken = new RefreshToken
 		{
 			Id = Guid.NewGuid(),
 			Jti = securityToken.Id,
-			CreatedAt = timeNow.ToUnixTimeSeconds(),
-			ExpiresAt = timeNow.Add(_jwt.RefreshTokenLifeTime).ToUnixTimeSeconds(),
+			CreatedAt = timeNow.GetTotalSeconds(),
+			ExpiresAt = timeNow.Add(_jwt.RefreshTokenLifeTime).GetTotalSeconds(),
 			UserId = user.Id,
 			Invalidated = false,
 			Used = false
 		};
 		
-		await _tokenRepo.SaveAsync(refreshToken, ct);
+		try
+		{
+			await _uow.TokenRepo.SaveAsync(refreshToken, ct);
+			await _uow.SaveChangesAsync(ct);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(ct);
+			
+			throw;
+		}
 		
 		return new TokenGenerationResult
 		{
@@ -207,13 +217,13 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	public async Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest userLoginRequest, CancellationToken ct)
+	public async Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest loginRequest, CancellationToken ct)
 	{
-		var user = await _userRepo.GetAsync(userLoginRequest.Login, ct);
+		var user = await _uow.UserRepo.GetAsync(loginRequest.Login, ct);
 		
-		if (user == null || !_passwordService.VerifyPassword(userLoginRequest.Password, user.PasswordHash))
+		if (user is null || !_passwordService.VerifyPassword(loginRequest.Password, user.PasswordHash))
 		{
-			return AuthResultFail("user", "Incorrect login/password");
+			return AuthResultFail("login", "Incorrect login/password");
 		}
 		
 		return AuthResultSuccess(user.Id, user.Email);
@@ -223,17 +233,17 @@ public class AuthService : IAuthService
 	{
 		if (!Guid.TryParse(tokens.RefreshToken, out var refreshTokenId))
 		{
-			return AuthResultFail("refreshToken", "Invalid refresh token");
+			return AuthResultFail("refresh_token", "Invalid refresh token");
 		}
 		
-		var userPrincipal = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
+		var principal = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
 		
-		if (userPrincipal == null)
+		if (principal == null)
 		{
 			return AuthResultFail("accessToken", "Invalid access token");
 		}
 		
-		var refreshToken = await _tokenRepo.GetAsync(refreshTokenId, ct);
+		var refreshToken = await _uow.TokenRepo.GetAsync(refreshTokenId, ct);
 		
 		if (refreshToken == null)
 		{
@@ -260,10 +270,19 @@ public class AuthService : IAuthService
 			return AuthResultFail("accessToken", "Tokens do not match");
 		}
 		
-		await _tokenRepo.SetUsedAsync(refreshTokenId, ct);
-		var email = userPrincipal.FindEmail(true)!;
+		try
+		{
+			await _uow.TokenRepo.SetUsedAsync(refreshTokenId, ct);
+			await _uow.SaveChangesAsync(ct);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(ct);
+			
+			throw;
+		}
 		
-		return AuthResultSuccess(refreshToken.UserId, email);
+		return AuthResultSuccess(refreshToken.UserId, principal.FindEmail(true)!);
 	}
 	
 	private static string GetViolatedColumnName(SqlException ex)

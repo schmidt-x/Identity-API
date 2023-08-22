@@ -36,16 +36,16 @@ public class AuthController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> CreateSession(EmailRequest emailRequest, CancellationToken ct)
 	{
-		var sessionResult = await _authService.CreateSessionAsync(emailRequest.Email, ct);
+		var result = await _authService.CreateSessionAsync(emailRequest.Email, ct);
 		
-		if (!sessionResult.Succeeded)
-			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
+		if (!result.Succeeded)
+			return BadRequest(new FailResponse { Errors = result.Errors });
 		
-		var _ = _emailSender.SendAsync(emailRequest.Email, sessionResult.VerificationCode);
+		var _ = _emailSender.SendAsync(emailRequest.Email, result.VerificationCode);
 		
 		Response.Cookies.Append(
 			"session_id",
-			sessionResult.Id, // should I convert it into Base64?
+			result.Id, // should I convert it into Base64?
 			new()
 			{
 				Secure = true,

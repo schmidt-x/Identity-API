@@ -8,9 +8,9 @@ public interface IJwtService
 	/// Updates payload and reissues new Jwt access token
 	/// </summary>
 	/// <param name="jwtToken">Jwt token to update</param>
-	/// <param name="newJti">New Jti to update</param>
-	/// <param name="newEmail">New email address to update (optional)</param>
-	/// <returns>Jwt access token</returns>
+	/// <param name="newJti">New Jti to replace</param>
+	/// <param name="newEmail">New email address to replace (optional)</param>
+	/// <returns>Updated Jwt token</returns>
 	string UpdateToken(string jwtToken, Guid newJti, string? newEmail = null);
 	
 	

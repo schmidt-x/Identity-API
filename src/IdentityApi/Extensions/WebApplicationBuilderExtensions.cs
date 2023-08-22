@@ -1,7 +1,9 @@
 ﻿using IdentityApi.Contracts.Options;
 using Microsoft.AspNetCore.Builder;
+using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Extensions;
 
@@ -14,6 +16,18 @@ public static class WebApplicationBuilderExtensions
 			.Bind(builder.Configuration.GetRequiredSection(ConnectionStringsOptions.ConnectionStrings))
 			.Validate(o => !string.IsNullOrEmpty(o.Mssql), "Connection string is required")
 			.ValidateOnStart();
+		
+		return builder;
+	}
+	
+	public static WebApplicationBuilder AddMssql(this WebApplicationBuilder builder)
+	{
+		builder.Services.AddScoped<SqlConnection>(sp =>
+		{
+			var cnnOptions = sp.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value;
+			
+			return new SqlConnection(cnnOptions.Mssql);
+		});
 		
 		return builder;
 	}

@@ -12,6 +12,6 @@ public interface IRefreshTokenRepository
 	Task<RefreshToken?> GetAsync(Guid tokenId, CancellationToken ct);
 	Task SetUsedAsync(Guid tokenId, CancellationToken ct);
 	Task<IEnumerable<string>> InvalidateAllAsync(Guid userId, CancellationToken ct);
-	Task UpdateJtiAsync(Guid oldJti, Guid newJti, CancellationToken ct);
-	Task UpdateJtiAndSetValidAsync(Guid oldJti, Guid newJti, CancellationToken ct);
+	Task UpdateJtiAsync(Guid jti, Guid newJti, CancellationToken ct);
+	Task UpdateJtiAndSetValidAsync(Guid jti, Guid newJti, CancellationToken ct);
 }

@@ -10,8 +10,8 @@ public interface IAuthService
 {
 	Task<SessionResult> CreateSessionAsync(string email, CancellationToken ct);
 	ResultEmpty VerifyEmail(string sessionId, string verificationCode);
-	Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest userRegistrationRequest, CancellationToken ct);
-	Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest userLoginRequest, CancellationToken ct);
+	Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct);
+	Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest loginRequest, CancellationToken ct);
 	Task<TokenGenerationResult> GenerateTokensAsync(UserClaims user, CancellationToken ct);
 	Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshingRequest tokens, CancellationToken ct);
 }

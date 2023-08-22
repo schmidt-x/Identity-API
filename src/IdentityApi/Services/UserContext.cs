@@ -90,5 +90,5 @@ public class UserContext : IUserContext
 			throw new Exception("User is not authenticated");
 	}
 	
-	private static bool IsAuthenticated(IIdentity? identity) => identity is { IsAuthenticated: true } ;
+	private static bool IsAuthenticated(IIdentity? identity) => identity is { IsAuthenticated: true };
 }

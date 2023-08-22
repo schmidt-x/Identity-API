@@ -58,7 +58,7 @@ public class MeController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Sends verification code to the old email address
+	/// Sends verification code to the current email address
 	/// </summary>
 	/// <response code="200">Verification code is sent</response>
 	[HttpPost("email-update")]
@@ -69,31 +69,31 @@ public class MeController : ControllerBase
 		
 		var _ = _emailSender.SendAsync(HttpContext.User.FindEmail()!, verificationCode);
 		
-		return Ok(new MessageResponse { Message = "Verification code is sent to your old email" });
+		return Ok(new MessageResponse { Message = "Verification code is sent to your current email address" });
 	}
 	
 	/// <summary>
-	/// Verifies old email address
+	/// Verifies current email address
 	/// </summary>
-	/// <response code="200">Old email address is verified</response>
+	/// <response code="200">Current email address is verified</response>
 	/// <response code="400">Verification failed</response>
 	[HttpPatch("email-update/verify-old-email")]
 	[ProducesResponseType(typeof(MessageResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
-	public IActionResult VerifyOldEmail(CodeVerificationRequest codeRequest)
+	public IActionResult VerifyEmail(CodeVerificationRequest codeRequest)
 	{
-		var result = _meService.VerifyOldEmail(codeRequest.Code);
+		var result = _meService.VerifyEmail(codeRequest.Code);
 		
 		if (!result.Succeeded)
 		{
 			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
 		
-		return Ok(new MessageResponse { Message = "Old email has successfully been verified"});
+		return Ok(new MessageResponse { Message = "Current email address has successfully been verified"});
 	}
 	
 	/// <summary>
-	/// Registers new email address and send verification code
+	/// Registers new email address and sends verification code
 	/// </summary>
 	/// <response code="200">Email is registered and verification code is sent</response> 
 	/// <response code="400">Validation failed</response> 
@@ -111,7 +111,7 @@ public class MeController : ControllerBase
 		
 		var _ = _emailSender.SendAsync(emailRequest.Email, result.Value);
 		
-		return Ok(new MessageResponse { Message = "Verification code is sent to your new email" });
+		return Ok(new MessageResponse { Message = "Verification code is sent to your new email address" });
 	}
 	
 	/// <summary>
