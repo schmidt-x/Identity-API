@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using IdentityApi.Contracts.Options;
+using IdentityApi.Options;
 using IdentityApi.Data.Repositories;
-using IdentityApi.Responses;
+using IdentityApi.Contracts.Responses;
 using IdentityApi.Validation.OptionsValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;

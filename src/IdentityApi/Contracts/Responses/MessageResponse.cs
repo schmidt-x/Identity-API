@@ -1,4 +1,4 @@
-﻿namespace IdentityApi.Responses;
+﻿namespace IdentityApi.Contracts.Responses;
 
 public class MessageResponse
 {

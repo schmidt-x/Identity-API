@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 using FluentMigrator.Runner;
-using IdentityApi.Contracts.Options;
+using IdentityApi.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

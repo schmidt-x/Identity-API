@@ -1,6 +1,6 @@
 ﻿using FluentMigrator;
 
-namespace IdentityApi.Migrations;
+namespace IdentityApi.Data.Migrations;
 
 [Migration(202305231000)]
 public class InitialMigration_202305231000 : Migration

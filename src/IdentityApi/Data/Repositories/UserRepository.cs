@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using IdentityApi.Data.DataAccess;
-using IdentityApi.Models;
+using IdentityApi.Domain.Models;
 
 namespace IdentityApi.Data.Repositories;
 

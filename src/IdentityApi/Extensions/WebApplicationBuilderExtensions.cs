@@ -1,4 +1,4 @@
-﻿using IdentityApi.Contracts.Options;
+﻿using IdentityApi.Options;
 using Microsoft.AspNetCore.Builder;
 using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;

@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace IdentityApi.Responses;
+namespace IdentityApi.Contracts.Responses;
 
-public class AuthSuccessResponse
+public class AuthResponse
 {
 	public string Message { get; set; } = default!;
 	public string AccessToken { get; set; } = default!;

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using IdentityApi.Models;
+using IdentityApi.Domain.Models;
 
 namespace IdentityApi.Results;
 

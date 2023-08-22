@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Contracts.Requests;
 using IdentityApi.Filters;
-using IdentityApi.Responses;
+using IdentityApi.Contracts.Responses;
 using IdentityApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -87,7 +87,7 @@ public class AuthController : ControllerBase
 	/// <response code="400">Username is already taken or validation failed</response>
 	[HttpPost("registration/register")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
-	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
+	[ProducesResponseType(typeof(AuthResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> Register(UserRegistrationRequest userRegistrationRequest, CancellationToken ct)
 	{
@@ -104,7 +104,7 @@ public class AuthController : ControllerBase
 		
 		Response.Cookies.Delete("session_id");
 		
-		return Ok(new AuthSuccessResponse
+		return Ok(new AuthResponse
 		{
 			Message = "You have successfully registered",
 			AccessToken = tokens.AccessToken,
@@ -119,7 +119,7 @@ public class AuthController : ControllerBase
 	/// <response code="400">Validation failed</response>
 	/// <response code="401">User's login/password are wrong</response>
 	[HttpPost("login")]
-	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
+	[ProducesResponseType(typeof(AuthResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	[ProducesResponseType(typeof(FailResponse), 401)]
 	public async Task<IActionResult> Login(UserLoginRequest userLoginRequest, CancellationToken ct)
@@ -133,7 +133,7 @@ public class AuthController : ControllerBase
 		
 		var tokens = await _authService.GenerateTokensAsync(result.Claims, ct);
 		
-		return Ok(new AuthSuccessResponse
+		return Ok(new AuthResponse
 		{
 			Message = "You have successfully logged in",
 			AccessToken = tokens.AccessToken,
@@ -148,7 +148,7 @@ public class AuthController : ControllerBase
 	/// <response code="400">Tokens are missing</response>
 	/// <response code="401">Tokens are invalid</response>
 	[HttpPost("refresh")]
-	[ProducesResponseType(typeof(AuthSuccessResponse), 200)]
+	[ProducesResponseType(typeof(AuthResponse), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	[ProducesResponseType(typeof(FailResponse), 401)]
 	public async Task<IActionResult> RefreshToken(TokenRefreshingRequest tokensRequest, CancellationToken ct)
@@ -162,7 +162,7 @@ public class AuthController : ControllerBase
 		
 		var tokens = await _authService.GenerateTokensAsync(result.Claims, ct);
 		
-		return Ok(new AuthSuccessResponse
+		return Ok(new AuthResponse
 		{
 			Message = "You have successfully refreshed the tokens",
 			AccessToken = tokens.AccessToken,

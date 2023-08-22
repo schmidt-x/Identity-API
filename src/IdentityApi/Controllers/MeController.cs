@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Extensions;
-using IdentityApi.Responses;
+using IdentityApi.Contracts.Responses;
 using IdentityApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
-using IdentityApi.Contracts.Options;
+using IdentityApi.Options;
 using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Services;

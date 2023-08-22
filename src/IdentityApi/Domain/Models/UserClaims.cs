@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace IdentityApi.Models;
+namespace IdentityApi.Domain.Models;
 
 public class UserClaims
 {

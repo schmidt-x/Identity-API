@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security;
 using System.Threading.Tasks;
-using IdentityApi.Responses;
+using IdentityApi.Contracts.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;

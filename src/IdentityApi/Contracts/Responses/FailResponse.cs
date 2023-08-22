@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace IdentityApi.Responses;
+namespace IdentityApi.Contracts.Responses;
 
 public class FailResponse
 {

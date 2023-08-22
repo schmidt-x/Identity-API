@@ -1,4 +1,4 @@
-﻿namespace IdentityApi.Contracts.Options;
+﻿namespace IdentityApi.Options;
 
 public class ConnectionStringsOptions
 {

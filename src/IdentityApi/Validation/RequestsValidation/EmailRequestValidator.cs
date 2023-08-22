@@ -3,9 +3,9 @@ using IdentityApi.Contracts.Requests;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
-public class EmailUpdateRequestValidator : AbstractValidator<EmailRequest>
+public class EmailRequestValidator : AbstractValidator<EmailRequest>
 {
-	public EmailUpdateRequestValidator()
+	public EmailRequestValidator()
 	{
 		RuleFor(x => x.Email)
 			.NotEmpty().WithMessage("Email address is required")

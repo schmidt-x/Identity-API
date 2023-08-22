@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using IdentityApi.Contracts.Options;
+using IdentityApi.Options;
 using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Services;

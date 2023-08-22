@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Contracts.Requests;
-using IdentityApi.Models;
+using IdentityApi.Domain.Models;
 using IdentityApi.Results;
 
 namespace IdentityApi.Services;

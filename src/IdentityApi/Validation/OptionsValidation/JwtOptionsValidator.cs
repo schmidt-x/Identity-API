@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using IdentityApi.Contracts.Options;
+using IdentityApi.Options;
 using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Validation.OptionsValidation;

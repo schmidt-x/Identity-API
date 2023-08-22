@@ -2,8 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Data.Repositories;
-using IdentityApi.Models;
-using IdentityApi.Responses;
+using IdentityApi.Domain.Models;
+using IdentityApi.Contracts.Responses;
 using IdentityApi.Results;
 
 namespace IdentityApi.Services;

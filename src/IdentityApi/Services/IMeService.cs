@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using IdentityApi.Responses;
+using IdentityApi.Contracts.Responses;
 using IdentityApi.Results;
 
 namespace IdentityApi.Services;
