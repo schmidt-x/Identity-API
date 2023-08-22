@@ -26,7 +26,7 @@ public class InitialMigration_202305231000 : Migration
 		if not exists (select 1 from sys.tables where name = 'RefreshToken')
 			create table [RefreshToken] (
 				id uniqueidentifier not null,
-				jti nvarchar(36) not null,
+				jti uniqueidentifier not null,
 				created_at bigint not null,
 				expires_at bigint not null,
 				used bit not null,
@@ -34,6 +34,7 @@ public class InitialMigration_202305231000 : Migration
 				user_id uniqueidentifier not null,
 				
 				constraint PK_RefreshToken primary key (id),
+				constraint UQ_RefreshToken_jti Unique (jti),
 				constraint FK_RefreshToken_User foreign key (user_id) references dbo.[User]
 			)
 		""";
