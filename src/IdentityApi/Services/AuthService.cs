@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -132,29 +131,13 @@ public class AuthService : IAuthService
 		try
 		{
 			await _uow.UserRepo.SaveAsync(user, ct);
-			await _uow.SaveChangesAsync(default);
+			await _uow.SaveChangesAsync(ct);
 		}
-		catch(SqlException ex) when (ex.Number == 2627) // in case if 'Race condition' occurs
+		catch(Exception ex)
 		{
-			await _uow.UndoChangesAsync(default);
+			await _uow.UndoChangesAsync(CancellationToken.None);
 			
-			var column = GetViolatedColumnName(ex);
-			var error = string.Empty;
-			
-			switch(column)
-			{
-				case "username":
-					error = $"Username '{user.Username}' is already taken";
-					break;
-				case "email":
-					error = $"Email address '{user.Email}' is already taken";
-					
-					// remove session from the cache, so the user would have to restart the session
-					_cacheService.Remove(sessionId);
-					break;
-			}
-			
-			return AuthResultFail(column, error);
+			throw;
 		}
 		
 		_cacheService.Remove(sessionId);
@@ -285,23 +268,6 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(refreshToken.UserId, principal.FindEmail(true)!);
 	}
 	
-	private static string GetViolatedColumnName(SqlException ex)
-	{
-		var message = ex.Message;
-		const int startIndex = 36;
-		var endIndex = message.IndexOf('.') - 1;
-		
-		var constraint = message.Substring(startIndex, endIndex - startIndex);
-		
-		// constraint name template is 'Constraint_Table_column'
-		// for example 'UQ_User_email' or 'UQ_User_username'
-		var parts = constraint.Split('_');
-		var column = parts[2];
-		
-		// TODO log 
-		
-		return column;
-	}
 	
 	private ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out SecurityToken? securityToken)
 	{
