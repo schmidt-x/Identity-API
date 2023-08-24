@@ -151,10 +151,11 @@ public class AuthService : IAuthService
 		var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 		var handler = new JwtSecurityTokenHandler();
 		
+		var jti = Guid.NewGuid();
 		var identity = new ClaimsIdentity(new[]
 		{
 			new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-			new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+			new Claim(JwtRegisteredClaimNames.Jti, jti.ToString()),
 			new Claim(JwtRegisteredClaimNames.Email, user.Email)
 		}, JwtBearerDefaults.AuthenticationScheme);
 		
@@ -173,7 +174,7 @@ public class AuthService : IAuthService
 		var refreshToken = new RefreshToken
 		{
 			Id = Guid.NewGuid(),
-			Jti = securityToken.Id,
+			Jti = jti,
 			CreatedAt = timeNow.GetTotalSeconds(),
 			ExpiresAt = timeNow.Add(_jwt.RefreshTokenLifeTime).GetTotalSeconds(),
 			UserId = user.Id,
@@ -248,7 +249,7 @@ public class AuthService : IAuthService
 			return AuthResultFail("refreshToken", "Refresh token has been expired");
 		}
 		
-		if (!refreshToken.Jti.Equals(securityToken!.Id, StringComparison.InvariantCultureIgnoreCase))
+		if (!refreshToken.Jti.Equals(Guid.Parse(securityToken!.Id)))
 		{
 			return AuthResultFail("accessToken", "Tokens do not match");
 		}

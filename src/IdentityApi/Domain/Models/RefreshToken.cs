@@ -5,7 +5,7 @@ namespace IdentityApi.Domain.Models;
 public class RefreshToken
 {
 	public Guid Id { get; set; }
-	public string Jti { get; set; } = default!;
+	public Guid Jti { get; set; }
 	public long CreatedAt { get; set; }
 	public long ExpiresAt { get; set; }
 	public bool Used { get; set; }

@@ -139,7 +139,7 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Password is updated</response> 
 	/// <response code="400">Verification failed</response>
-	[HttpPatch("password-change")]
+	[HttpPatch("password-update")]
 	[ProducesResponseType(typeof(Me), 200)]
 	[ProducesResponseType(typeof(FailResponse), 400)]
 	public async Task<IActionResult> UpdatePassword(PasswordUpdateRequest passwordRequest, CancellationToken ct)
