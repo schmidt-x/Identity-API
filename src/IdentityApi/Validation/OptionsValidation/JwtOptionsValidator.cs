@@ -30,9 +30,9 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
 			sb.Append("Audience is required\n");
 		}
 		
-		if (options.AccessTokenLifeTime.TotalMinutes is > 15 or < 1)
+		if (options.AccessTokenLifeTime.TotalMinutes is > 5 or < 1)
 		{
-			sb.Append($"The total minutes of access token must be in the range of 1 to 15. " +
+			sb.Append($"The total minutes of access token must be in the range of 1 to 5. " +
 								$"Actual: {options.AccessTokenLifeTime.TotalMinutes}\n");
 		}
 		
