@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.Requests;
-using IdentityApi.Validation.Helpers;
+using IdentityApi.Validation;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
@@ -14,9 +14,10 @@ public class UsernameUpdateRequestValidator : AbstractValidator<UsernameUpdateRe
 			.MaximumLength(32).WithMessage("Username must not exceed the limit of 32 characters")
 			.Custom((username, context) =>
 			{
-				if (ValidationHelper.ContainsRestrictedCharacters(username))
+				if (ValidationHelper.UsernameContainsRestrictedCharacters(username))
 					context.AddFailure("Username can only contain letters, numbers, underscores and periods");
-			});
+					
+			}).When(x => !string.IsNullOrWhiteSpace(x.Username), ApplyConditionTo.CurrentValidator);
 		
 		RuleFor(x => x.Password)
 			.NotEmpty().WithMessage("Password is required");
