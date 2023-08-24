@@ -13,7 +13,7 @@ public class InitialMigration_202305231000 : Migration
 				id uniqueidentifier not null,
 				username nvarchar(32) not null, 
 				email nvarchar(254) not null,
-				password_hash nvarchar(256) not null,
+				password_hash nvarchar(60) not null,
 				created_at datetime not null,
 				updated_at datetime not null,
 				role nvarchar(16) not null,
