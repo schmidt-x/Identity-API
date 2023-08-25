@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.Requests;
+using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
@@ -8,12 +9,14 @@ public class PasswordUpdateRequestValidator : AbstractValidator<PasswordUpdateRe
 	public PasswordUpdateRequestValidator()
 	{
 		RuleFor(x => x.Password)
-			.NotEmpty().WithMessage("Password is required");
+			.NotEmpty().OverridePropertyName(ErrorKey.Password)
+				.WithMessage(ErrorMessage.PasswordRequired);
 		
 		RuleFor(x => x.NewPassword)
-			.NotEmpty().WithMessage("New password is required")
-			.MinimumLength(8).WithMessage("New password must contain at least 8 characters")
-			.NotEqual(x => x.Password).WithMessage("New password cannot be the same as the old password")
+			.NotEmpty().OverridePropertyName(ErrorKey.NewPassword)
+				.WithMessage(ErrorMessage.PasswordRequired)
+			.MinimumLength(8).WithMessage(ErrorMessage.PasswordTooShort)
+			.NotEqual(x => x.Password).WithMessage(ErrorMessage.PasswordsEqual)
 			.Custom((password, context) =>
 			{
 				foreach(var failure in ValidationHelper.ValidatePassword(password))

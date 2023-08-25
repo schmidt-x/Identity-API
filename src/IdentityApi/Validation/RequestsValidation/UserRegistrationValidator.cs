@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.Requests;
+using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
@@ -8,19 +9,21 @@ public class UserRegistrationRequestValidator : AbstractValidator<UserRegistrati
 	public UserRegistrationRequestValidator()
 	{
 		RuleFor(x => x.Username)
-			.NotEmpty().WithMessage("Username is required")
-			.MinimumLength(3).WithMessage("Username must contain at least 3 characters")
-			.MaximumLength(32).WithMessage("Username must not exceed the limit of 32 characters")
+			.NotEmpty().OverridePropertyName(ErrorKey.Username)
+				.WithMessage(ErrorMessage.UsernameRequired)
+			.MinimumLength(3).WithMessage(ErrorMessage.UsernameTooShort)
+			.MaximumLength(32).WithMessage(ErrorMessage.UsernameTooLong)
 			.Custom((username, context) =>
 			{
-				if (ValidationHelper.UsernameContainsRestrictedCharacters(username))
-					context.AddFailure("Username can only contain letters, numbers, underscores and periods");
+				if (ValidationHelper.UsernameContainsRestrictedSymbols(username))
+					context.AddFailure(ErrorMessage.UsernameContainsRestrictedSymbols);
 					
 			}).When(x => !string.IsNullOrWhiteSpace(x.Username), ApplyConditionTo.CurrentValidator);
 		
 		RuleFor(x => x.Password)
-			.NotEmpty().WithMessage("Password is required")
-			.MinimumLength(8).WithMessage("Password must contain at least 8 characters")
+			.NotEmpty().OverridePropertyName(ErrorKey.Password)
+				.WithMessage(ErrorMessage.PasswordRequired)
+			.MinimumLength(8).WithMessage(ErrorMessage.PasswordTooShort)
 			.Custom((password, context) =>
 			{
 				foreach(var failure in ValidationHelper.ValidatePassword(password))

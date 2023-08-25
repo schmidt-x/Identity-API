@@ -1,10 +1,11 @@
 ﻿using System;
+using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Validation;
 
 public static class ValidationHelper
 {
-	public static bool UsernameContainsRestrictedCharacters(string username)
+	public static bool UsernameContainsRestrictedSymbols(string username)
 	{
 		foreach(var l in username)
 			if (!char.IsLetter(l) && !char.IsNumber(l) && l != '_' && l != '.')
@@ -60,11 +61,11 @@ public static class ValidationHelper
 		var failures = new string[totalErrors];
 		var i = 0;
 		
-		if (!hasLower) failures[i++] = "Password must contain at least one lower-case letter";
-		if (!hasUpper) failures[i++] = "Password must contain at least one upper-case letter";
-		if (!hasDigit) failures[i++] = "Password must contain at least one digit";
-		if (!hasSymbol) failures[i++] = "Password must contain at least one symbol";
-		if (hasSpace) failures[i] = "Password must not contain any white spaces";
+		if (!hasLower) failures[i++] = ErrorMessage.PasswordMustContainLowerCase;
+		if (!hasUpper) failures[i++] = ErrorMessage.PasswordMustContainUpperCase;
+		if (!hasDigit) failures[i++] = ErrorMessage.PasswordMustContainDigit;
+		if (!hasSymbol) failures[i++] = ErrorMessage.PasswordMustContainSymbol;
+		if (hasSpace) failures[i] = ErrorMessage.PasswordContainsWhiteSpace;
 		
 		return failures;
 	}

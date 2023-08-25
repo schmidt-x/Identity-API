@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.Requests;
+using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
@@ -8,9 +9,11 @@ public class TokenRefreshingRequestValidator : AbstractValidator<TokenRefreshing
 	public TokenRefreshingRequestValidator()
 	{
 		RuleFor(x => x.AccessToken)
-			.NotEmpty().WithMessage("Access token is required");
+			.NotEmpty().OverridePropertyName(ErrorKey.AccessToken)
+				.WithMessage(ErrorMessage.AccessTokenRequired);
 		
 		RuleFor(x => x.RefreshToken)
-			.NotEmpty().WithMessage("Refresh token is required");
+			.NotEmpty().OverridePropertyName(ErrorKey.RefreshToken)
+				.WithMessage(ErrorMessage.RefreshTokenRequired);
 	}
 }
