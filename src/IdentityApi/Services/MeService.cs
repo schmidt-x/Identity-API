@@ -14,7 +14,7 @@ public class MeService : IMeService
 	private readonly IUserContext _userCtx;
 	private readonly IPasswordService _passwordService;
 	private readonly ICodeGenerationService _codeService;
-	private readonly ICacheService _cacheService;
+	private readonly ISessionService _sessionService;
 	private readonly IJwtService _jwtService;
 	private readonly IUnitOfWork _uow;
 
@@ -22,14 +22,14 @@ public class MeService : IMeService
 		IUserContext userCtx, 
 		IPasswordService passwordService,
 		ICodeGenerationService codeService, 
-		ICacheService cacheService,
+		ISessionService sessionService,
 		IJwtService jwtService,
 		IUnitOfWork uow)
 	{
 		_userCtx = userCtx;
 		_passwordService = passwordService;
 		_codeService = codeService;
-		_cacheService = cacheService;
+		_sessionService = sessionService;
 		_jwtService = jwtService;
 		_uow = uow;
 	}
@@ -104,7 +104,7 @@ public class MeService : IMeService
 		};
 		
 		var userId = _userCtx.GetId().ToString();
-		_cacheService.Set(userId, session, TimeSpan.FromMinutes(5));
+		_sessionService.Create(userId, session, TimeSpan.FromMinutes(5));
 		
 		return verificationCode;
 	}
@@ -113,7 +113,7 @@ public class MeService : IMeService
 	{
 		var userId = _userCtx.GetId().ToString();
 		
-		if (!_cacheService.TryGetValue<EmailSession>(userId, out var session))
+		if (!_sessionService.TryGetValue<EmailSession>(userId, out var session))
 		{
 			return ResultFail<string>(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
@@ -134,7 +134,7 @@ public class MeService : IMeService
 		session.VerificationCode = verificationCode;
 		session.Attempts = 0;
 		
-		_cacheService.Update(userId, session, TimeSpan.FromMinutes(5));
+		_sessionService.Update(userId, session, TimeSpan.FromMinutes(5));
 		
 		return ResultSuccess(verificationCode);
 	}
@@ -144,7 +144,7 @@ public class MeService : IMeService
 		var userId = _userCtx.GetId();
 		var userIdAsString = userId.ToString();
 		
-		if (!_cacheService.TryGetValue<EmailSession>(userIdAsString, out var session))
+		if (!_sessionService.TryGetValue<EmailSession>(userIdAsString, out var session))
 		{
 			return ResultFail<Me>(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
@@ -166,7 +166,7 @@ public class MeService : IMeService
 			
 			if (attempts >= 3)
 			{
-				_cacheService.Remove(userIdAsString);
+				_sessionService.Remove(userIdAsString);
 			}
 			
 			return result;
@@ -208,7 +208,7 @@ public class MeService : IMeService
 			Token = newToken
 		};
 		
-		_cacheService.Remove(userIdAsString);
+		_sessionService.Remove(userIdAsString);
 		
 		return ResultSuccess(me);
 	}

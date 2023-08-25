@@ -2,9 +2,9 @@
 
 namespace IdentityApi.Services;
 
-public interface ICacheService
+public interface ISessionService
 {
-	T Set<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow);
+	T Create<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow);
 	bool TryGetValue<T>(object key, out T? value);
 	void Remove(object key);
 	T Update<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow);

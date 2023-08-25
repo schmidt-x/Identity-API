@@ -19,7 +19,7 @@ namespace IdentityApi.Services;
 
 public class AuthService : IAuthService
 {
-	private readonly ICacheService _cacheService;
+	private readonly ISessionService _sessionService;
 	private readonly TokenValidationParameters _tokenValidationParameters;
 	private readonly ICodeGenerationService _codeService;
 	private readonly JwtOptions _jwt;
@@ -27,7 +27,7 @@ public class AuthService : IAuthService
 	private readonly IUnitOfWork _uow;
 
 	public AuthService(
-		ICacheService cacheService,
+		ISessionService sessionService,
 		IOptions<JwtOptions> jwtOptions,
 		TokenValidationParameters tokenValidationParameters,
 		ICodeGenerationService codeService,
@@ -35,7 +35,7 @@ public class AuthService : IAuthService
 		IUnitOfWork uow)
 	{
 		_uow = uow;
-		_cacheService = cacheService;
+		_sessionService = sessionService;
 		_tokenValidationParameters = tokenValidationParameters;
 		_codeService = codeService;
 		_jwt = jwtOptions.Value;
@@ -59,7 +59,7 @@ public class AuthService : IAuthService
 			VerificationCode = verificationCode,
 		};
 		
-		_cacheService.Set(sessionId, session, TimeSpan.FromMinutes(5));
+		_sessionService.Create(sessionId, session, TimeSpan.FromMinutes(5));
 		
 		return new SessionResult
 		{
@@ -71,7 +71,7 @@ public class AuthService : IAuthService
 	
 	public ResultEmpty VerifyEmail(string sessionId, string verificationCode)
 	{
-		if (!_cacheService.TryGetValue<EmailSession>(sessionId, out var session))
+		if (!_sessionService.TryGetValue<EmailSession>(sessionId, out var session))
 		{
 			return ResultEmptyFail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
@@ -88,21 +88,21 @@ public class AuthService : IAuthService
 			
 			if (attempts >= 3)
 			{
-				_cacheService.Remove(sessionId);
+				_sessionService.Remove(sessionId);
 			}
 			
 			return result;
 		}
 		
 		session.IsVerified = true;
-		_cacheService.Update(sessionId, session, TimeSpan.FromMinutes(5));
+		_sessionService.Update(sessionId, session, TimeSpan.FromMinutes(5));
 		
 		return ResultEmptySuccess();
 	}
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct)
 	{
-		if (!_cacheService.TryGetValue<EmailSession>(sessionId, out var session))
+		if (!_sessionService.TryGetValue<EmailSession>(sessionId, out var session))
 		{
 			return AuthResultFail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
@@ -143,7 +143,7 @@ public class AuthService : IAuthService
 			throw;
 		}
 		
-		_cacheService.Remove(sessionId);
+		_sessionService.Remove(sessionId);
 		
 		return AuthResultSuccess(user.Id, user.Email);
 	}

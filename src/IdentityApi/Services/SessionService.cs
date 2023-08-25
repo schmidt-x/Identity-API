@@ -3,16 +3,16 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace IdentityApi.Services;
 
-public class CacheService : ICacheService
+public class SessionService : ISessionService
 {
 	private readonly IMemoryCache _memoryCache;
 
-	public CacheService(IMemoryCache memoryCache)
+	public SessionService(IMemoryCache memoryCache)
 	{
 		_memoryCache = memoryCache;
 	}
 	
-	public T Set<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow)
+	public T Create<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow)
 	{
 		return _memoryCache.Set(key, value, absoluteExpirationRelativeToNow);
 	}
@@ -29,6 +29,6 @@ public class CacheService : ICacheService
 	
 	public T Update<T>(object key, T value, TimeSpan absoluteExpirationRelativeToNow)
 	{
-		return Set(key, value, absoluteExpirationRelativeToNow);
+		return Create(key, value, absoluteExpirationRelativeToNow);
 	}
 }

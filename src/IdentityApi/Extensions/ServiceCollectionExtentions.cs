@@ -41,7 +41,7 @@ public static class ServiceCollectionExtentions
 			.AddScoped<IEmailSender, EmailSender>()
 			.AddScoped<IPasswordService, PasswordService>()
 			.AddScoped<IUserContext, UserContext>()
-			.AddSingleton<ICacheService, CacheService>()
+			.AddSingleton<ISessionService, SessionService>()
 			.AddScoped<ICodeGenerationService, CodeGenerationService>()
 			.AddScoped<IMeService, MeService>()
 			.AddScoped<IJwtService, JwtService>();
