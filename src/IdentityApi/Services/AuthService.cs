@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using IdentityApi.Contracts.Requests;
 using IdentityApi.Options;
 using IdentityApi.Data.Repositories;
+using IdentityApi.Domain.Constants;
 using IdentityApi.Extensions;
 using IdentityApi.Domain.Models;
 using IdentityApi.Results;
@@ -46,13 +47,13 @@ public class AuthService : IAuthService
 	{
 		if (await _uow.UserRepo.EmailExistsAsync(email, ct))
 		{
-			return SessionResultFail("email", $"Email address '{email}' is already taken");
+			return SessionResultFail(ErrorKey.Email, $"Email address '{email}' is already taken");
 		}
 		
 		string verificationCode = _codeService.Generate();
 		var sessionId = Guid.NewGuid().ToString();
 		
-		var session = new UserSession
+		var session = new EmailSession
 		{
 			EmailAddress = email,
 			VerificationCode = verificationCode,
@@ -70,20 +71,20 @@ public class AuthService : IAuthService
 	
 	public ResultEmpty VerifyEmail(string sessionId, string verificationCode)
 	{
-		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
+		if (!_cacheService.TryGetValue<EmailSession>(sessionId, out var session))
 		{
-			return ResultEmptyFail("session", "No session was found");
+			return ResultEmptyFail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
 		if (session!.IsVerified)
 		{
-			return ResultEmptyFail("session", "Email address is already verified");
-		} 
+			return ResultEmptyFail(ErrorKey.Email, ErrorMessage.EmailAlreadyVerified);
+		}
 		
 		if (session.VerificationCode != verificationCode)
 		{
 			var attempts = ++session.Attempts;
-			var result = ResultEmptyFail("code", AttemptsErrors(attempts));
+			var result = ResultEmptyFail(ErrorKey.Code, AttemptsErrors(attempts));
 			
 			if (attempts >= 3)
 			{
@@ -101,31 +102,33 @@ public class AuthService : IAuthService
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct)
 	{
-		if (!_cacheService.TryGetValue<UserSession>(sessionId, out var session))
+		if (!_cacheService.TryGetValue<EmailSession>(sessionId, out var session))
 		{
-			return AuthResultFail("session", "No session was found");
+			return AuthResultFail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
 		if (session!.IsVerified == false)
 		{
-			return AuthResultFail("email", "Email address is not verified");
+			return AuthResultFail(ErrorKey.Email, ErrorMessage.EmailNotVerified);
 		}
 		
 		if (await _uow.UserRepo.UsernameExistsAsync(registrationRequest.Username, ct))
 		{
-			return AuthResultFail("username", $"Username '{registrationRequest.Username}' is already taken");
+			return AuthResultFail(ErrorKey.Username, $"Username '{registrationRequest.Username}' is already taken");
 		}
 		
 		var timeNow = DateTime.UtcNow;
+		var passwordHash = _passwordService.HashPassword(registrationRequest.Password);
+		
 		var user = new User
 		{
 			Id = Guid.NewGuid(),
 			Username = registrationRequest.Username,
-			PasswordHash = _passwordService.HashPassword(registrationRequest.Password),
+			PasswordHash = passwordHash,
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
-			Role = "user"
+			Role = Role.User
 		};
 		
 		try
@@ -207,7 +210,7 @@ public class AuthService : IAuthService
 		
 		if (user is null || !_passwordService.VerifyPassword(loginRequest.Password, user.PasswordHash))
 		{
-			return AuthResultFail("login", "Incorrect login/password");
+			return AuthResultFail(ErrorKey.Login, ErrorMessage.WrongLoginPassword);
 		}
 		
 		return AuthResultSuccess(user.Id, user.Email);
@@ -217,41 +220,41 @@ public class AuthService : IAuthService
 	{
 		if (!Guid.TryParse(tokens.RefreshToken, out var refreshTokenId))
 		{
-			return AuthResultFail("refresh_token", "Invalid refresh token");
+			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.InvalidRefreshToken);
 		}
 		
 		var principal = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
 		
 		if (principal == null)
 		{
-			return AuthResultFail("accessToken", "Invalid access token");
+			return AuthResultFail(ErrorKey.AccessToken, ErrorMessage.InvalidAccessToken);
 		}
 		
 		var refreshToken = await _uow.TokenRepo.GetAsync(refreshTokenId, ct);
 		
 		if (refreshToken == null)
 		{
-			return AuthResultFail("refreshToken", "Invalid refresh token");
+			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.InvalidRefreshToken);
 		}
 		
 		if (refreshToken.Invalidated)
 		{
-			return AuthResultFail("refreshToken", "Refresh token is invalidated");
+			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenInvalidated);
 		}
 		
 		if (refreshToken.Used)
 		{
-			return AuthResultFail("refreshToken", "Refresh token has already been used");
+			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenUsed);
 		}
 		
 		if (refreshToken.ExpiresAt < DateTime.UtcNow.GetTotalSeconds())
 		{
-			return AuthResultFail("refreshToken", "Refresh token has been expired");
+			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenExpired);
 		}
 		
 		if (!refreshToken.Jti.Equals(Guid.Parse(securityToken!.Id)))
 		{
-			return AuthResultFail("accessToken", "Tokens do not match");
+			return AuthResultFail(ErrorKey.AccessToken, ErrorMessage.TokensNotMatch);
 		}
 		
 		try

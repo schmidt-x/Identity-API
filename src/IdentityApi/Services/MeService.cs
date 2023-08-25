@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Domain.Models;
 using IdentityApi.Contracts.Responses;
+using IdentityApi.Domain.Constants;
 using IdentityApi.Results;
 
 namespace IdentityApi.Services;
@@ -53,15 +54,15 @@ public class MeService : IMeService
 	{
 		if (await _uow.UserRepo.UsernameExistsAsync(newUsername, ct))
 		{
-			return ResultFail<Me>("username", $"Username '{newUsername}' is already taken");
+			return ResultFail<Me>(ErrorKey.Username, $"Username '{newUsername}' is already taken");
 		}
 		
 		var id = _userCtx.GetId();
-		var user = await _uow.UserRepo.GetRequiredAsync(id, ct); // do I really need the whole entity?
+		var user = await _uow.UserRepo.GetRequiredAsync(id, ct);
 		
 		if (!_passwordService.VerifyPassword(password, user.PasswordHash))
 		{
-			return ResultFail<Me>("password", "Password is not correct");
+			return ResultFail<Me>(ErrorKey.Password, ErrorMessage.WrongPassword);
 		}
 		
 		UserProfile profile;
@@ -94,7 +95,7 @@ public class MeService : IMeService
 	{
 		var verificationCode = _codeService.Generate();
 		
-		var session = new UserSession
+		var session = new EmailSession
 		{
 			EmailAddress = null!, // it's for new email, we don't need it yet
 			VerificationCode = verificationCode,
@@ -108,57 +109,23 @@ public class MeService : IMeService
 		return verificationCode;
 	}
 	
-	public ResultEmpty VerifyEmail(string verificationCode)
-	{
-		var userId = _userCtx.GetId().ToString();
-		
-		if (!_cacheService.TryGetValue<UserSession>(userId, out var session))
-		{
-			return ResultEmptyFail("session", "No session was found");
-		}
-		
-		if (session!.IsVerified)
-		{
-			return ResultEmptyFail("session", "Current email address is already verified");
-		}
-		
-		if (session.VerificationCode != verificationCode)
-		{
-			var attempts = ++session.Attempts;
-			var result = ResultEmptyFail("code", AttemptsErrors(attempts));
-			
-			if (attempts >= 3)
-			{
-				_cacheService.Remove(userId);
-			}
-			
-			return result;
-		}
-		
-		session.IsVerified = true;
-		// refresh the life-time
-		_cacheService.Update(userId, session, TimeSpan.FromMinutes(5));
-		
-		return new ResultEmpty { Succeeded = true };
-	}
-
 	public async Task<Result<string>> CacheNewEmailAsync(string newEmail, CancellationToken ct)
 	{
 		var userId = _userCtx.GetId().ToString();
 		
-		if (!_cacheService.TryGetValue<UserSession>(userId, out var session))
+		if (!_cacheService.TryGetValue<EmailSession>(userId, out var session))
 		{
-			return ResultFail<string>("session", "No session was found");
+			return ResultFail<string>(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
 		if (session!.IsVerified == false)
 		{
-			return ResultFail<string>("email", "Current email address is not verified");
+			return ResultFail<string>(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
 		}
 		
 		if (await _uow.UserRepo.EmailExistsAsync(newEmail, ct))
 		{
-			return ResultFail<string>("email", $"Email address '{newEmail}' is already taken");
+			return ResultFail<string>(ErrorKey.Email, $"Email address '{newEmail}' is already taken");
 		}
 		
 		var verificationCode = _codeService.Generate();
@@ -177,20 +144,25 @@ public class MeService : IMeService
 		var userId = _userCtx.GetId();
 		var userIdAsString = userId.ToString();
 		
-		if (!_cacheService.TryGetValue<UserSession>(userIdAsString, out var session))
+		if (!_cacheService.TryGetValue<EmailSession>(userIdAsString, out var session))
 		{
-			return ResultFail<Me>("session", "No session was found");
+			return ResultFail<Me>(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
-		if (session!.IsVerified == false) // checks if old email is verified
+		if (session!.IsVerified == false)
 		{
-			return ResultFail<Me>("email", "Current email address is not verified");
+			return ResultFail<Me>(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
+		}
+		
+		if (string.IsNullOrWhiteSpace(session.EmailAddress))
+		{
+			return ResultFail<Me>(ErrorKey.Email, ErrorMessage.NewEmailRequired);
 		}
 		
 		if (session.VerificationCode != verificationCode)
 		{
 			var attempts = ++session.Attempts;
-			var result = ResultFail<Me>("code", AttemptsErrors(attempts));
+			var result = ResultFail<Me>(ErrorKey.Code, AttemptsErrors(attempts));
 			
 			if (attempts >= 3)
 			{
@@ -311,8 +283,5 @@ public class MeService : IMeService
 		
 	private static Result<T> ResultSuccess<T>(T value) =>
 		new() { Value = value , Succeeded = true };
-		
-	private static ResultEmpty ResultEmptyFail(string key, params string[] errors) =>
-		new() { Errors = new() { { key, errors } } };
 	
 }

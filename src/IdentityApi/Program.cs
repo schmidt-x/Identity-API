@@ -1,15 +1,10 @@
-using System.Data.SqlClient;
-using System.Net;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using IdentityApi.Data.Repositories;
 using IdentityApi.Extensions;
-using IdentityApi.Factories;
 using IdentityApi.Filters;
 using IdentityApi.Installers;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
