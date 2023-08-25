@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using IdentityApi.Contracts.Requests;
-using IdentityApi.Validation;
 
 namespace IdentityApi.Validation.RequestsValidation;
 
