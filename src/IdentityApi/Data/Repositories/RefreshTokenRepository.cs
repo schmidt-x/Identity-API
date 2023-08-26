@@ -39,25 +39,30 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 		return _db.LoadSingleOrDefaultAsync<RefreshToken>(sql, parameters, ct);
 	}
 
-	public Task SetUsedAsync(Guid tokenId, CancellationToken ct)
+	public Task<Guid> SetUsedAsync(Guid tokenId, CancellationToken ct)
 	{
-		const string sql = "UPDATE RefreshToken SET used = 1 WHERE id = @tokenId";
+		const string sql = """
+			UPDATE [RefreshToken] 
+			SET used = 1
+			OUTPUT INSERTED.jti
+			WHERE id = @tokenId
+			""";
 		
 		var parameters = new DynamicParameters(new { tokenId });
 		
-		return _db.ExecuteAsync(sql, parameters, ct);
+		return _db.LoadSingleAsync<Guid>(sql, parameters, ct);
 	}
 
-	public Task<IEnumerable<string>> InvalidateAllAsync(Guid userId, CancellationToken ct)
+	public Task<IEnumerable<Guid>> InvalidateAllAsync(Guid userId, CancellationToken ct)
 	{
 		const string sql = """
+			SELECT jti FROM RefreshToken WHERE user_id = @userId and invalidated = 0 and used = 0
 			UPDATE RefreshToken SET invalidated = 1 WHERE user_id = @userId
-			SELECT jti FROM RefreshToken WHERE user_id = @userId
 		""";
 		
  		var parameters = new DynamicParameters(new { userId });
 		
-		return _db.LoadAsync<string>(sql, parameters, ct);
+		return _db.LoadAsync<Guid>(sql, parameters, ct);
 	}
 	
 	public Task UpdateJtiAsync(Guid jti, Guid newJti, CancellationToken ct)

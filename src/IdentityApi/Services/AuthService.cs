@@ -259,7 +259,8 @@ public class AuthService : IAuthService
 		
 		try
 		{
-			await _uow.TokenRepo.SetUsedAsync(refreshTokenId, ct);
+			var jti = await _uow.TokenRepo.SetUsedAsync(refreshTokenId, ct);
+			// _tokenBlacklist.Add(jti.ToString());
 			await _uow.SaveChangesAsync(ct);
 		}
 		catch(Exception ex)

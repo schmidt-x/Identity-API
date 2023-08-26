@@ -7,10 +7,11 @@ using IdentityApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using IdentityApi.Contracts.Requests;
+using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Controllers;
 
-[Authorize("user")]
+[Authorize(Policy.UserPolicy)]
 [Produces("application/json")]
 [ApiController, Route("api/[controller]")]
 [ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.Unauthorized)]

@@ -233,9 +233,9 @@ public class MeService : IMeService
 			profile = await _uow.UserRepo.UpdatePasswordAsync(userId, newPasswordHash, ct);
 			
 			var jtis = await _uow.TokenRepo.InvalidateAllAsync(userId, ct);
-			// _tokenBlacklist.AddRange(jtis);
+			// _tokenBlacklist.AddRange(jtis.Select(x => x.ToString());
 			
-			// make valid the one, that is a pair of currently authenticated access token,
+			// make valid the one (refresh token), that is a pair of currently authenticated access token,
 			// so the user could still use it on token-refreshing
 			await _uow.TokenRepo.UpdateJtiAndSetValidAsync(_userCtx.GetJti(), newJti, ct);
 			
