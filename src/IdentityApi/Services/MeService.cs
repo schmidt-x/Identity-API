@@ -13,7 +13,7 @@ namespace IdentityApi.Services;
 public class MeService : IMeService
 {
 	private readonly IUserContext _userCtx;
-	private readonly IPasswordService _passwordService;
+	private readonly IPasswordHasher _passwordHasher;
 	private readonly ICodeGenerationService _codeService;
 	private readonly ISessionService _sessionService;
 	private readonly IJwtService _jwtService;
@@ -22,7 +22,7 @@ public class MeService : IMeService
 
 	public MeService(
 		IUserContext userCtx, 
-		IPasswordService passwordService,
+		IPasswordHasher passwordHasher,
 		ICodeGenerationService codeService, 
 		ISessionService sessionService,
 		IJwtService jwtService,
@@ -30,7 +30,7 @@ public class MeService : IMeService
 		ILogger logger)
 	{
 		_userCtx = userCtx;
-		_passwordService = passwordService;
+		_passwordHasher = passwordHasher;
 		_codeService = codeService;
 		_sessionService = sessionService;
 		_jwtService = jwtService;
@@ -64,7 +64,7 @@ public class MeService : IMeService
 		var userId = _userCtx.GetId();
 		var user = await _uow.UserRepo.GetRequiredAsync(userId, ct);
 		
-		if (!_passwordService.VerifyPassword(password, user.PasswordHash))
+		if (!_passwordHasher.VerifyPassword(password, user.PasswordHash))
 		{
 			return ResultFail<Me>(ErrorKey.Password, ErrorMessage.WrongPassword);
 		}
@@ -242,13 +242,13 @@ public class MeService : IMeService
 		var userId = _userCtx.GetId();
 		var passwordHash = await _uow.UserRepo.GetPasswordHashAsync(userId, ct);
 		
-		if (!_passwordService.VerifyPassword(password, passwordHash))
+		if (!_passwordHasher.VerifyPassword(password, passwordHash))
 		{
 			return ResultFail<Me>("password", "Password is not correct");
 		}
 		
 		var newJti = Guid.NewGuid();
-		var newPasswordHash = _passwordService.HashPassword(newPassword);
+		var newPasswordHash = _passwordHasher.HashPassword(newPassword);
 		UserProfile profile;
 		
 		try

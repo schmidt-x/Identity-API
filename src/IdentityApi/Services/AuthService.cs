@@ -24,7 +24,7 @@ public class AuthService : IAuthService
 	private readonly TokenValidationParameters _tokenValidationParameters;
 	private readonly ICodeGenerationService _codeService;
 	private readonly JwtOptions _jwt;
-	private readonly IPasswordService _passwordService;
+	private readonly IPasswordHasher _passwordHasher;
 	private readonly IUnitOfWork _uow;
 	private readonly ILogger _logger;
 
@@ -33,7 +33,7 @@ public class AuthService : IAuthService
 		IOptions<JwtOptions> jwtOptions,
 		TokenValidationParameters tokenValidationParameters,
 		ICodeGenerationService codeService,
-		IPasswordService passwordService,
+		IPasswordHasher passwordHasher,
 		IUnitOfWork uow,
 		ILogger logger)
 	{
@@ -42,7 +42,7 @@ public class AuthService : IAuthService
 		_tokenValidationParameters = tokenValidationParameters;
 		_codeService = codeService;
 		_jwt = jwtOptions.Value;
-		_passwordService = passwordService;
+		_passwordHasher = passwordHasher;
 		_logger = logger;
 	}
 	
@@ -122,7 +122,7 @@ public class AuthService : IAuthService
 		}
 		
 		var timeNow = DateTime.UtcNow;
-		var passwordHash = _passwordService.HashPassword(registrationRequest.Password);
+		var passwordHash = _passwordHasher.HashPassword(registrationRequest.Password);
 		
 		var user = new User
 		{
@@ -219,7 +219,7 @@ public class AuthService : IAuthService
 	{
 		var user = await _uow.UserRepo.GetAsync(loginRequest.Login, ct);
 		
-		if (user is null || !_passwordService.VerifyPassword(loginRequest.Password, user.PasswordHash))
+		if (user is null || !_passwordHasher.VerifyPassword(loginRequest.Password, user.PasswordHash))
 		{
 			return AuthResultFail(ErrorKey.Login, ErrorMessage.WrongLoginPassword);
 		}

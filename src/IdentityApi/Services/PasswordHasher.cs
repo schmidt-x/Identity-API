@@ -2,7 +2,7 @@
 
 using Bcrypt = BCrypt.Net.BCrypt;
 
-public class PasswordService : IPasswordService
+public class PasswordHasher : IPasswordHasher
 {
 	public string HashPassword(string password)
 	{

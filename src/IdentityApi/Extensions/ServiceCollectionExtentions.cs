@@ -39,7 +39,7 @@ public static class ServiceCollectionExtentions
 		return services
 			.AddScoped<IAuthService, AuthService>()
 			.AddScoped<IEmailSender, EmailSender>()
-			.AddScoped<IPasswordService, PasswordService>()
+			.AddScoped<IPasswordHasher, PasswordHasher>()
 			.AddScoped<IUserContext, UserContext>()
 			.AddSingleton<ISessionService, SessionService>()
 			.AddScoped<ICodeGenerationService, CodeGenerationService>()
