@@ -1,8 +1,10 @@
 ﻿namespace IdentityApi.Domain.Constants;
 
-public class ErrorMessage
+public static class ErrorMessage
 {
 	public const string SessionNotFound = "Session not found";
+	
+	public const string Unauthorized = "Unauthorized. Register or log in";
 	
 	public const string EmailAlreadyVerified = "Email address is already verified";
 	public const string EmailNotVerified = "Email address is not verified";
@@ -10,6 +12,7 @@ public class ErrorMessage
 	public const string EmailRequired = "Email address is required";
 	public const string NewEmailRequired = "New email address is required";
 	public const string InvalidEmail = "Invalid email address";
+	public const string EmailsEqual = "New email address cannot be the same as the old email";
 	
 	public const string UsernameRequired = "Username is required";
 	public const string UsernameTooShort = "Username must contain at least 3 characters";

@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.Domain.Constants;
 
-public class ErrorKey
+public static class ErrorKey
 {
 	public const string Username = "username";
 	public const string Email = "email";
@@ -14,4 +14,6 @@ public class ErrorKey
 	
 	public const string AccessToken = "access_token";
 	public const string RefreshToken = "refresh_token";
+	
+	public const string Auth = "auth";
 }

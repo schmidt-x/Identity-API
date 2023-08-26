@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using IdentityApi.Options;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Contracts.Responses;
+using IdentityApi.Domain.Constants;
+using IdentityApi.Extensions;
 using IdentityApi.Validation.OptionsValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +16,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityApi.Installers;
@@ -67,13 +69,13 @@ public static class JwtInstaller
 					OnTokenValidated = async tvc =>
 					{
 						var ctx = tvc.HttpContext;
-						var user = tvc.Principal!;
+						var principal = tvc.Principal!;
 						
-						var userId = Guid.Parse(user.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+						var userId = Guid.Parse(principal.FindId()!);
 						var userRepo = ctx.RequestServices.GetRequiredService<IUserRepository>();
 						var userRole = await userRepo.GetRoleAsync(userId, default);
 						
-						var claims = user.Claims.Append(new Claim("role", userRole));
+						var claims = principal.Claims.Append(new Claim(Key.Role, userRole));
 						var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
 						
 						tvc.Principal = new ClaimsPrincipal(identity);
@@ -82,11 +84,11 @@ public static class JwtInstaller
 					OnChallenge = async ctx =>
 					{
 						var resposne = ctx.Response;
-						resposne.StatusCode = 401;
+						resposne.StatusCode = (int)HttpStatusCode.Unauthorized;
 						
 						await resposne.WriteAsJsonAsync(new FailResponse
 						{
-							Errors = new() { { "auth", new[] { "Unauthorized. Register or log in" } } }
+							Errors = new() { { ErrorKey.Auth, new[] { ErrorMessage.Unauthorized } } }
 						});
 						
 						ctx.HandleResponse();
@@ -106,9 +108,9 @@ public static class JwtInstaller
 				.RequireAuthenticatedUser()
 				.Build();
 				
-			o.AddPolicy("user", b =>
+			o.AddPolicy(Policy.UserPolicy, b =>
 			{
-				b.RequireClaim("role", "user");
+				b.RequireClaim(Key.Role, Role.User);
 			});
 		});
 		
