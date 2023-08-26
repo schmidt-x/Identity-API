@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Serilog;
 
 namespace IdentityApi.Extensions;
 
@@ -52,6 +53,18 @@ public static class WebApplicationBuilderExtensions
 			.Validate(x => !string.IsNullOrEmpty(x.Text), "Text for code generation is required")
 			.Validate(x => x.Length >= 6, "Length for code generation must contain at least 6 characters")
 			.ValidateOnStart();
+		
+		return builder;
+	}
+	
+	public static WebApplicationBuilder AddSerilog(this WebApplicationBuilder builder)
+	{
+		Log.Logger = new LoggerConfiguration()
+			.ReadFrom.Configuration(builder.Configuration)
+			.CreateLogger();
+		
+		// replaces built-in logger with Serilog and registers it as a singleton 
+		builder.Host.UseSerilog(Log.Logger, true);
 		
 		return builder;
 	}

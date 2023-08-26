@@ -12,7 +12,6 @@ public class ErrorKey
 	public const string Password = "password";
 	public const string NewPassword = "new_password";
 	
-	
 	public const string AccessToken = "access_token";
 	public const string RefreshToken = "refresh_token";
 }

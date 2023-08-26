@@ -1,3 +1,4 @@
+using System;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using IdentityApi.Extensions;
@@ -16,8 +17,7 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder();
 		
-		builder.Host.UseSerilog((context, config) =>
-			config.ReadFrom.Configuration(context.Configuration));
+		builder.AddSerilog();
 		
 		builder.Services.AddRouting(options => options.LowercaseUrls = true);
 		
@@ -76,6 +76,18 @@ public class Program
 		app.UseAuthentication();
 		app.UseAuthorization();
 		
-		app.Run();
+		try
+		{
+			Log.Information("Starting application...");
+			app.Run();
+		}
+		catch(Exception ex)
+		{
+			Log.Fatal("On starting application: {errorMessage}", ex.Message);
+		}
+		finally
+		{
+			Log.CloseAndFlush();
+		}
 	}
 }
