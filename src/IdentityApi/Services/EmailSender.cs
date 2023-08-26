@@ -1,17 +1,21 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using IdentityApi.Options;
 using Microsoft.Extensions.Options;
+using Serilog;
 
 namespace IdentityApi.Services;
 
 public class EmailSender : IEmailSender
 {
+	private readonly ILogger _logger;
 	private readonly EmailOptions _email;
 	
-	public EmailSender(IOptions<EmailOptions> options)
+	public EmailSender(IOptions<EmailOptions> options, ILogger logger)
 	{
+		_logger = logger;
 		_email = options.Value;
 	}
 	
@@ -34,6 +38,14 @@ public class EmailSender : IEmailSender
 			Credentials = new NetworkCredential(_email.Address, _email.Password)
 		};
 		
-		await smtpClient.SendMailAsync(emailMessage);
+		try
+		{
+			await smtpClient.SendMailAsync(emailMessage);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Sending email: {errorMessage}. Destination: {emailTo}", ex.Message, emailTo);
+			throw;
+		}
 	}
 }
