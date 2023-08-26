@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using IdentityApi.Options;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace IdentityApi.Validation.OptionsValidation;
 
@@ -16,8 +17,9 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
 		} 
 		else if (options.SecretKey.Length < 32)
 		{
-			sb.Append($"The secret key must contain at least 32 characters. " +
-								$"Actual: {options.SecretKey.Length}\n");
+			sb.Append("The secret key must contain at least 32 characters. ")
+				.Append("Actual: ").Append(options.SecretKey.Length)
+				.AppendLine();
 		}
 		
 		if (string.IsNullOrEmpty(options.Issuer))
@@ -32,14 +34,16 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
 		
 		if (options.AccessTokenLifeTime.TotalMinutes is > 5 or < 1)
 		{
-			sb.Append($"The total minutes of access token must be in the range of 1 to 5. " +
-								$"Actual: {options.AccessTokenLifeTime.TotalMinutes}\n");
+			sb.Append("The total minutes of access token must be in the range of 1 to 5. ")
+				.Append("Actual: ").Append(options.AccessTokenLifeTime.TotalMinutes)
+				.AppendLine();
 		}
 		
 		if (options.RefreshTokenLifeTime.TotalDays is < 7 or > 180)
 		{
-			sb.Append($"The total days of refresh token must be in the range of 7 to 180. " +
-								$"Actual: {options.RefreshTokenLifeTime.TotalDays}");
+			sb.Append("The total days of refresh token must be in the range of 7 to 180. ")
+				.Append("Actual: ").Append(options.RefreshTokenLifeTime.TotalDays)
+				.AppendLine();
 		}
 		
 		return sb.Length != 0
