@@ -12,6 +12,6 @@ public interface IAuthService
 	ResultEmpty VerifyEmail(string sessionId, string verificationCode);
 	Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct);
 	Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest loginRequest, CancellationToken ct);
-	Task<TokenGenerationResult> GenerateTokensAsync(UserClaims user, CancellationToken ct);
+	Task<TokensResult> GenerateTokensAsync(UserClaims user, CancellationToken ct);
 	Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshingRequest tokens, CancellationToken ct);
 }

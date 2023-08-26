@@ -14,6 +14,7 @@ using IdentityApi.Results;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 namespace IdentityApi.Services;
 
@@ -25,6 +26,7 @@ public class AuthService : IAuthService
 	private readonly JwtOptions _jwt;
 	private readonly IPasswordService _passwordService;
 	private readonly IUnitOfWork _uow;
+	private readonly ILogger _logger;
 
 	public AuthService(
 		ISessionService sessionService,
@@ -32,7 +34,8 @@ public class AuthService : IAuthService
 		TokenValidationParameters tokenValidationParameters,
 		ICodeGenerationService codeService,
 		IPasswordService passwordService,
-		IUnitOfWork uow)
+		IUnitOfWork uow,
+		ILogger logger)
 	{
 		_uow = uow;
 		_sessionService = sessionService;
@@ -40,6 +43,7 @@ public class AuthService : IAuthService
 		_codeService = codeService;
 		_jwt = jwtOptions.Value;
 		_passwordService = passwordService;
+		_logger = logger;
 	}
 	
 	
@@ -135,10 +139,13 @@ public class AuthService : IAuthService
 		{
 			await _uow.UserRepo.SaveAsync(user, ct);
 			await _uow.SaveChangesAsync(ct);
+			
+			_logger.Information("User is successfully created. Id: {userId}, email: {email}", user.Id, user.Email);
 		}
 		catch(Exception ex)
 		{
 			await _uow.UndoChangesAsync(CancellationToken.None);
+			_logger.Error(ex, "Creating new user: {errorMessage}. User: {userId}", ex.Message, user.Id);
 			
 			throw;
 		}
@@ -148,7 +155,7 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(user.Id, user.Email);
 	}
 	
-	public async Task<TokenGenerationResult> GenerateTokensAsync(UserClaims user, CancellationToken ct)
+	public async Task<TokensResult> GenerateTokensAsync(UserClaims user, CancellationToken ct)
 	{
 		var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
 		var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -193,11 +200,15 @@ public class AuthService : IAuthService
 		catch(Exception ex)
 		{
 			await _uow.UndoChangesAsync(ct);
+			_logger.Error(
+				ex,
+				"Creating new refresh token: {errorMessage}. Token: {refreshTokenId}",
+				ex.Message, refreshToken.Id);
 			
 			throw;
 		}
 		
-		return new TokenGenerationResult
+		return new TokensResult
 		{
 			AccessToken = handler.WriteToken(securityToken),
 			RefreshToken = refreshToken.Id
@@ -266,6 +277,10 @@ public class AuthService : IAuthService
 		catch(Exception ex)
 		{
 			await _uow.UndoChangesAsync(ct);
+			_logger.Error(
+				ex,
+				"Setting 'used' to refresh token: {errorMessage}. Token: {refreshTokenId}",
+				ex.Message, refreshTokenId);
 			
 			throw;
 		}

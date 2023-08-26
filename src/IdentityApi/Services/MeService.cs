@@ -6,6 +6,7 @@ using IdentityApi.Domain.Models;
 using IdentityApi.Contracts.Responses;
 using IdentityApi.Domain.Constants;
 using IdentityApi.Results;
+using Serilog;
 
 namespace IdentityApi.Services;
 
@@ -17,6 +18,7 @@ public class MeService : IMeService
 	private readonly ISessionService _sessionService;
 	private readonly IJwtService _jwtService;
 	private readonly IUnitOfWork _uow;
+	private readonly ILogger _logger;
 
 	public MeService(
 		IUserContext userCtx, 
@@ -24,7 +26,8 @@ public class MeService : IMeService
 		ICodeGenerationService codeService, 
 		ISessionService sessionService,
 		IJwtService jwtService,
-		IUnitOfWork uow)
+		IUnitOfWork uow,
+		ILogger logger)
 	{
 		_userCtx = userCtx;
 		_passwordService = passwordService;
@@ -32,6 +35,7 @@ public class MeService : IMeService
 		_sessionService = sessionService;
 		_jwtService = jwtService;
 		_uow = uow;
+		_logger = logger;
 	}
 	
 	
@@ -57,8 +61,8 @@ public class MeService : IMeService
 			return ResultFail<Me>(ErrorKey.Username, $"Username '{newUsername}' is already taken");
 		}
 		
-		var id = _userCtx.GetId();
-		var user = await _uow.UserRepo.GetRequiredAsync(id, ct);
+		var userId = _userCtx.GetId();
+		var user = await _uow.UserRepo.GetRequiredAsync(userId, ct);
 		
 		if (!_passwordService.VerifyPassword(password, user.PasswordHash))
 		{
@@ -68,12 +72,17 @@ public class MeService : IMeService
 		UserProfile profile;
 		try
 		{
-			profile = await _uow.UserRepo.UpdateUsernameAsync(id, newUsername, ct);
+			profile = await _uow.UserRepo.UpdateUsernameAsync(userId, newUsername, ct);
 			await _uow.SaveChangesAsync(ct);
+			
+			_logger.Information(
+				"Username is updated. New username: {newUsename}, old username: {oldUsername}, user: {userId}",
+				newUsername, user.Username, userId);
 		}
 		catch(Exception ex)
 		{
 			await _uow.UndoChangesAsync(CancellationToken.None);
+			_logger.Error(ex, "Updating username: {errorMessage}. User: {userId}", ex.Message, user.Id);
 			
 			throw;
 		}
@@ -103,17 +112,20 @@ public class MeService : IMeService
 			Attempts = 0
 		};
 		
-		var userId = _userCtx.GetId().ToString();
-		_sessionService.Create(userId, session, TimeSpan.FromMinutes(5));
+		var userId = _userCtx.GetId();
+		_sessionService.Create(userId.ToString(), session, TimeSpan.FromMinutes(5));
+		
+		_logger.Information("Email-update session is created. User: {userId}", userId);
 		
 		return verificationCode;
 	}
 	
 	public async Task<Result<string>> CacheNewEmailAsync(string newEmail, CancellationToken ct)
 	{
-		var userId = _userCtx.GetId().ToString();
+		var userId = _userCtx.GetId();
+		var userIdAsString = userId.ToString();
 		
-		if (!_sessionService.TryGetValue<EmailSession>(userId, out var session))
+		if (!_sessionService.TryGetValue<EmailSession>(userIdAsString, out var session))
 		{
 			return ResultFail<string>(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
@@ -121,6 +133,11 @@ public class MeService : IMeService
 		if (session!.IsVerified == false)
 		{
 			return ResultFail<string>(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
+		}
+		
+		if (_userCtx.GetEmail() == newEmail)
+		{
+			return ResultFail<string>(ErrorKey.Email, ErrorMessage.EmailsEqual);
 		}
 		
 		if (await _uow.UserRepo.EmailExistsAsync(newEmail, ct))
@@ -134,7 +151,9 @@ public class MeService : IMeService
 		session.VerificationCode = verificationCode;
 		session.Attempts = 0;
 		
-		_sessionService.Update(userId, session, TimeSpan.FromMinutes(5));
+		_sessionService.Update(userIdAsString, session, TimeSpan.FromMinutes(5));
+		
+		_logger.Information("New email address is cached. New email: {newEmail}, user: {userId}", newEmail, userId);
 		
 		return ResultSuccess(verificationCode);
 	}
@@ -188,10 +207,15 @@ public class MeService : IMeService
 			// _tokenBlacklist.Add(currentJti);
 			
 			await _uow.SaveChangesAsync(ct);
+			
+			_logger.Information(
+				"Email address is udpated. New email: {newEmail}, old email: {oldEmail}, user: {userId}",
+				session.EmailAddress, _userCtx.GetEmail(), userId);
 		}
 		catch(Exception ex)
 		{
 			await _uow.UndoChangesAsync(CancellationToken.None);
+			_logger.Error(ex, "Updating email address: {errorMessage}. User: {userId}", ex.Message, userId);
 			
 			throw;
 		}
@@ -223,10 +247,9 @@ public class MeService : IMeService
 			return ResultFail<Me>("password", "Password is not correct");
 		}
 		
-		var newPasswordHash = _passwordService.HashPassword(newPassword);
-		
-		UserProfile profile;
 		var newJti = Guid.NewGuid();
+		var newPasswordHash = _passwordService.HashPassword(newPassword);
+		UserProfile profile;
 		
 		try
 		{
@@ -240,10 +263,13 @@ public class MeService : IMeService
 			await _uow.TokenRepo.UpdateJtiAndSetValidAsync(_userCtx.GetJti(), newJti, ct);
 			
 			await _uow.SaveChangesAsync(ct);
+			
+			_logger.Information("Password is updated. User: {userId}", userId);
 		}
 		catch(Exception ex)
 		{
 			await _uow.UndoChangesAsync(CancellationToken.None);
+			_logger.Error(ex, "Updating password: {errorMessage}. User: {userId}", ex.Message, userId);
 			
 			throw;
 		}
