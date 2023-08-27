@@ -16,4 +16,5 @@ public static class ErrorKey
 	public const string RefreshToken = "refresh_token";
 	
 	public const string Auth = "auth";
+	public const string Error = "error";
 }

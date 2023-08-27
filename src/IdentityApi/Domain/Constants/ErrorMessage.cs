@@ -2,9 +2,14 @@
 
 public static class ErrorMessage
 {
-	public const string SessionNotFound = "Session not found";
+	
+	public const string SessionNotFound = "Session is not found";
+	public const string SessionIdNotFound = "Session ID is not found";
+	public const string InvalidSessionId = "Invalid session ID";
 	
 	public const string Unauthorized = "Unauthorized. Register or log in";
+	
+	public const string UnexpectedError = "Unexpected error has occured";
 	
 	public const string EmailAlreadyVerified = "Email address is already verified";
 	public const string EmailNotVerified = "Email address is not verified";

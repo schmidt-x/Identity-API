@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Security;
 using System.Threading.Tasks;
 using IdentityApi.Contracts.Responses;
 using IdentityApi.Domain.Constants;
@@ -18,15 +17,20 @@ public class SessionCookieActionFilter : IAsyncActionFilter
 		{
 			context.Result = new BadRequestObjectResult(new FailResponse { Errors = new()
 			{
-				{ ErrorKey.Session, new[] { ErrorMessage.SessionNotFound } }
+				{ ErrorKey.Session, new[] { ErrorMessage.SessionIdNotFound } }
 			}});
 			
 			return;
-		} 
+		}
 		
-		if (!Guid.TryParse(sessionId, out var _))
+		if (!Guid.TryParse(sessionId, out _))
 		{
-			throw new SecurityException($"Session ID (Guid) is not valid: {sessionId}", typeof(Guid));
+			context.Result = new BadRequestObjectResult(new FailResponse { Errors = new()
+			{
+				{ ErrorKey.Session, new[] { ErrorMessage.InvalidSessionId } }
+			}});
+			
+			return;
 		}
 		
 		ctx.Items.Add(Key.SessionId, sessionId);
