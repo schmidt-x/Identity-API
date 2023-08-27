@@ -48,17 +48,21 @@ public class ExceptionHandlerMiddleware
 		switch(ex)
 		{
 			case SecurityTokenException secTokenEx:
-				_logger.Error(secTokenEx, "Security token error: {errorMessage}", secTokenEx.Message);
+				_logger.Warning(secTokenEx, "Security token error: {errorMessage}", secTokenEx.Message);
+				
 				response.StatusCode = (int)HttpStatusCode.Unauthorized;
 				errorKey = ErrorKey.Auth;
 				errorMessage = ErrorMessage.Unauthorized;
+				
 				break;
 				
 			default:
 				_logger.Error(ex, "Unexpected error: {errorMessage}", ex.Message);
+				
 				response.StatusCode = (int)HttpStatusCode.InternalServerError;
 				errorKey = ErrorKey.Error;
 				errorMessage = ErrorMessage.UnexpectedError;
+				
 				break;
 		}
 		

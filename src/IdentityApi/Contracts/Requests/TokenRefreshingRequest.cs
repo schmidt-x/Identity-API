@@ -1,12 +1,13 @@
 ﻿using System.Text.Json.Serialization;
+using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Contracts.Requests;
 
 public class TokenRefreshingRequest
 {
-	[JsonPropertyName("access_token")]
+	[JsonPropertyName(Key.AccessToken)]
 	public string AccessToken { get; set; } = default!;
 	
-	[JsonPropertyName("refresh_token")]
+	[JsonPropertyName(Key.RefreshToken)]
 	public string RefreshToken { get; set; } = default!;
 }

@@ -63,8 +63,8 @@ public class Program
 		
 		var app = builder.Build();
 		
-		app.UseSerilogRequestLogging();
 		app.UseExceptionHandlerMiddleware();
+		app.UseSerilogRequestLogging();
 		
 		app.MapControllers();
 		
@@ -83,7 +83,7 @@ public class Program
 		}
 		catch(Exception ex)
 		{
-			Log.Fatal("On starting application: {errorMessage}", ex.Message);
+			Log.Fatal(ex, "Starting application: {errorMessage}", ex.Message);
 		}
 		finally
 		{
