@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Security;
 using System.Security.Claims;
 using System.Security.Principal;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityApi.Services;
 
@@ -25,12 +25,12 @@ public class UserContext : IUserContext
 		
 		if (rawId == null)
 		{
-			throw new SecurityException("User claim 'sub' is not present");
+			throw new SecurityTokenException("User claim 'sub' is not present");
 		}
 		
 		if (!Guid.TryParse(rawId, out var userId))
 		{
-			throw new SecurityException("User claim 'sub' is not valid");
+			throw new SecurityTokenException("User claim 'sub' is not valid");
 		}
 		
 		return userId;
@@ -44,7 +44,7 @@ public class UserContext : IUserContext
 		
 		if (email is null)
 		{
-			throw new SecurityException("User claim 'email' is not present");
+			throw new SecurityTokenException("User claim 'email' is not present");
 		}
 		
 		return email;
@@ -73,12 +73,12 @@ public class UserContext : IUserContext
 		
 		if (string.IsNullOrEmpty(rawJti))
 		{
-			throw new SecurityException("User claim 'jti' is not present");
+			throw new SecurityTokenException("User claim 'jti' is not present");
 		}
 		
 		if (!Guid.TryParse(rawJti, out var jti))
 		{
-			throw new SecurityException("User claim 'jti' is not valid");
+			throw new SecurityTokenException("User claim 'jti' is not valid");
 		}
 		
 		return jti;
