@@ -44,7 +44,7 @@ public static class JwtInstaller
 			ValidateAudience = true,
 			ValidateIssuerSigningKey = true,
 			ValidateLifetime = true,
-			ClockSkew = TimeSpan.FromMinutes(1)
+			ClockSkew = jwt.ClockSkew
 		};
 		
 		builder.Services.AddSingleton(validationParameters);

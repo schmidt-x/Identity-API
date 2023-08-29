@@ -11,4 +11,5 @@ public class JwtOptions
 	public string Audience { get; set; } = String.Empty;
 	public TimeSpan AccessTokenLifeTime { get; set; }
 	public TimeSpan RefreshTokenLifeTime { get; set; }
+	public TimeSpan ClockSkew { get; set; }
 }
