@@ -27,6 +27,8 @@ public class AuthService : IAuthService
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly IUnitOfWork _uow;
 	private readonly ILogger _logger;
+	private readonly ITokenBlacklist _tokenBlacklist;
+	private readonly IJwtService _jwtService;
 
 	public AuthService(
 		ISessionService sessionService,
@@ -35,7 +37,9 @@ public class AuthService : IAuthService
 		ICodeGenerationService codeService,
 		IPasswordHasher passwordHasher,
 		IUnitOfWork uow,
-		ILogger logger)
+		ILogger logger,
+		ITokenBlacklist tokenBlacklist,
+		IJwtService jwtService)
 	{
 		_uow = uow;
 		_sessionService = sessionService;
@@ -44,6 +48,8 @@ public class AuthService : IAuthService
 		_jwt = jwtOptions.Value;
 		_passwordHasher = passwordHasher;
 		_logger = logger;
+		_tokenBlacklist = tokenBlacklist;
+		_jwtService = jwtService;
 	}
 	
 	
@@ -234,7 +240,7 @@ public class AuthService : IAuthService
 			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.InvalidRefreshToken);
 		}
 		
-		var principal = ValidateTokenExceptLifetime(tokens.AccessToken, out var securityToken);
+		var principal = ValidateTokenExceptLifetime(tokens.AccessToken, out var jwtSecurityToken);
 		
 		if (principal == null)
 		{
@@ -258,20 +264,27 @@ public class AuthService : IAuthService
 			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenUsed);
 		}
 		
-		if (refreshToken.ExpiresAt < DateTime.UtcNow.GetTotalSeconds())
+		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
+		
+		if (refreshToken.ExpiresAt < secondsNow)
 		{
 			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenExpired);
 		}
 		
-		if (!refreshToken.Jti.Equals(Guid.Parse(securityToken!.Id)))
+		if (!refreshToken.Jti.Equals(Guid.Parse(jwtSecurityToken!.Id)))
 		{
 			return AuthResultFail(ErrorKey.AccessToken, ErrorMessage.TokensNotMatch);
 		}
 		
 		try
 		{
-			var jti = await _uow.TokenRepo.SetUsedAsync(refreshTokenId, ct);
-			// _tokenBlacklist.Add(jti.ToString());
+			await _uow.TokenRepo.SetUsedAsync(refreshTokenId, ct);
+			
+			if (!_jwtService.IsExpired(jwtSecurityToken.ValidTo.GetTotalSeconds(), out var secondsLeft))
+			{
+				_tokenBlacklist.Add(jwtSecurityToken.Id, TimeSpan.FromSeconds(secondsLeft));
+			}
+			
 			await _uow.SaveChangesAsync(ct);
 		}
 		catch(Exception ex)
@@ -289,7 +302,7 @@ public class AuthService : IAuthService
 	}
 	
 	
-	private ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out SecurityToken? securityToken)
+	private ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out JwtSecurityToken? securityToken)
 	{
 		var handler = new JwtSecurityTokenHandler();
 		securityToken = default;
@@ -302,7 +315,7 @@ public class AuthService : IAuthService
 			if (!IsValidSecurityAlgorithm(secToken))
 				return null;
 			
-			securityToken = secToken;
+			securityToken = secToken as JwtSecurityToken;
 			return claimsPrincipal;
 		}
 		catch

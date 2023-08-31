@@ -18,4 +18,9 @@ public static class ClaimsPrincipalExtensions
 			? principal.FindFirstValue(ClaimTypes.NameIdentifier)
 			: principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
 	}
+	
+	public static string? FindJti(this ClaimsPrincipal principal)
+	{
+		return principal.FindFirstValue(JwtRegisteredClaimNames.Jti);
+	}
 }

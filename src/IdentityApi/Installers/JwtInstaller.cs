@@ -3,11 +3,13 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 using IdentityApi.Options;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Contracts.Responses;
 using IdentityApi.Domain.Constants;
 using IdentityApi.Extensions;
+using IdentityApi.Services;
 using IdentityApi.Validation.OptionsValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -62,41 +64,56 @@ public static class JwtInstaller
 				b.MapInboundClaims = false;
 				b.Events = new()
 				{
-					// Since the 'role' claim is not stored inside the Jwt token,
-					// we need to retrieve it from the db and add it to the request claims.
-					// This additional security measure ensures that the 'role' claim is retrieved dynamically
+					OnTokenValidated = ValidatedTokenHandler,
 					
-					OnTokenValidated = async tvc =>
-					{
-						var ctx = tvc.HttpContext;
-						var principal = tvc.Principal!;
-						
-						var userId = Guid.Parse(principal.FindId()!);
-						var userRepo = ctx.RequestServices.GetRequiredService<IUserRepository>();
-						var userRole = await userRepo.GetRoleAsync(userId, default);
-						
-						var claims = principal.Claims.Append(new Claim(Key.Role, userRole));
-						var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
-						
-						tvc.Principal = new ClaimsPrincipal(identity);
-					},
-					
-					OnChallenge = async ctx =>
-					{
-						var resposne = ctx.Response;
-						resposne.StatusCode = (int)HttpStatusCode.Unauthorized;
-						
-						await resposne.WriteAsJsonAsync(new FailResponse
-						{
-							Errors = new() { { ErrorKey.Auth, new[] { ErrorMessage.Unauthorized } } }
-						});
-						
-						ctx.HandleResponse();
-					}
+					OnChallenge = ChallengeHandler
 				};
 			});
 		
 		return builder;
+		
+		
+		async Task ValidatedTokenHandler(TokenValidatedContext tvc)
+		{
+			var services = tvc.HttpContext.RequestServices;
+			var principal = tvc.Principal!;
+			
+			// check if the token is black-listed
+			
+			var tokenBlacklist = services.GetRequiredService<ITokenBlacklist>();
+			
+			if (tokenBlacklist.Contains(principal.FindJti()!))
+			{
+				tvc.Fail("Token is blocked");
+				return;
+			}
+			
+			// Since the 'role' claim is not stored inside the Jwt token,
+			// we need to retrieve it from the database and add it to the request claims.
+			// This additional security measure ensures that the 'role' claim is retrieved dynamically
+			
+			var userId = Guid.Parse(principal.FindId()!);
+			var userRepo = services.GetRequiredService<IUserRepository>();
+			var userRole = await userRepo.GetRoleAsync(userId, default);
+						
+			var claims = principal.Claims.Append(new Claim(Key.Role, userRole));
+			var identity = new ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
+						
+			tvc.Principal = new ClaimsPrincipal(identity);
+		}
+		
+		async Task ChallengeHandler(JwtBearerChallengeContext ctx)
+		{
+			var response = ctx.Response;
+			response.StatusCode = (int)HttpStatusCode.Unauthorized;
+			
+			await response.WriteAsJsonAsync(new FailResponse
+			{
+				Errors = new() { { ErrorKey.Auth, new[] { ErrorMessage.Unauthorized } } }
+			});
+					
+			ctx.HandleResponse();
+		}
 	}
 	
 	public static WebApplicationBuilder AddAuthorizationWithPolicies(this WebApplicationBuilder builder)

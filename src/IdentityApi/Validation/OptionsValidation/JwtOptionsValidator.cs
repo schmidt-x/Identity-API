@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using IdentityApi.Options;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 
 namespace IdentityApi.Validation.OptionsValidation;
 

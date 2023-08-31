@@ -41,7 +41,10 @@ public static class ServiceCollectionExtentions
 			.AddScoped<IEmailSender, EmailSender>()
 			.AddScoped<IPasswordHasher, PasswordHasher>()
 			.AddScoped<IUserContext, UserContext>()
+			
 			.AddSingleton<ISessionService, SessionService>()
+			.AddSingleton<ITokenBlacklist, TokenBlacklist>()
+			
 			.AddScoped<ICodeGenerationService, CodeGenerationService>()
 			.AddScoped<IMeService, MeService>()
 			.AddScoped<IJwtService, JwtService>();

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Data.Repositories;
 using IdentityApi.Domain.Models;
 using IdentityApi.Contracts.Responses;
 using IdentityApi.Domain.Constants;
+using IdentityApi.Extensions;
 using IdentityApi.Results;
 using Serilog;
 
@@ -19,6 +21,8 @@ public class MeService : IMeService
 	private readonly IJwtService _jwtService;
 	private readonly IUnitOfWork _uow;
 	private readonly ILogger _logger;
+	private readonly ITokenBlacklist _tokenBlacklist;
+	
 
 	public MeService(
 		IUserContext userCtx, 
@@ -27,7 +31,8 @@ public class MeService : IMeService
 		ISessionService sessionService,
 		IJwtService jwtService,
 		IUnitOfWork uow,
-		ILogger logger)
+		ILogger logger,
+		ITokenBlacklist tokenBlacklist)
 	{
 		_userCtx = userCtx;
 		_passwordHasher = passwordHasher;
@@ -36,6 +41,7 @@ public class MeService : IMeService
 		_jwtService = jwtService;
 		_uow = uow;
 		_logger = logger;
+		_tokenBlacklist = tokenBlacklist;
 	}
 	
 	
@@ -204,7 +210,10 @@ public class MeService : IMeService
 			var currentJti = _userCtx.GetJti();
 			await _uow.TokenRepo.UpdateJtiAsync(currentJti, newJti, ct);
 			
-			// _tokenBlacklist.Add(currentJti);
+			if (!_jwtService.IsExpired(_userCtx.GetExp(), out var secondsLeft))
+			{
+				_tokenBlacklist.Add(currentJti.ToString(), TimeSpan.FromSeconds(secondsLeft));
+			}
 			
 			await _uow.SaveChangesAsync(ct);
 			
@@ -244,7 +253,7 @@ public class MeService : IMeService
 		
 		if (!_passwordHasher.VerifyPassword(password, passwordHash))
 		{
-			return ResultFail<Me>("password", "Password is not correct");
+			return ResultFail<Me>(ErrorKey.Password, ErrorMessage.WrongPassword);
 		}
 		
 		var newJti = Guid.NewGuid();
@@ -256,7 +265,8 @@ public class MeService : IMeService
 			profile = await _uow.UserRepo.UpdatePasswordAsync(userId, newPasswordHash, ct);
 			
 			var jtis = await _uow.TokenRepo.InvalidateAllAsync(userId, ct);
-			// _tokenBlacklist.AddRange(jtis.Select(x => x.ToString());
+			
+			_tokenBlacklist.AddRange(jtis.Select(x => x.ToString()), _jwtService.TotalExpirationTime);
 			
 			// make valid the one (refresh token), that is a pair of currently authenticated access token,
 			// so the user could still use it on token-refreshing
