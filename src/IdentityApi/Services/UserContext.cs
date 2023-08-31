@@ -23,14 +23,14 @@ public class UserContext : IUserContext
 		
 		var rawId = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 		
-		if (rawId == null)
+		if (rawId is null)
 		{
 			throw new SecurityTokenException("User claim 'sub' is not present");
 		}
 		
 		if (!Guid.TryParse(rawId, out var userId))
 		{
-			throw new SecurityTokenException("User claim 'sub' is not valid");
+			throw new SecurityTokenException($"User claim 'sub' is not valid Guid. (sub: {rawId})");
 		}
 		
 		return userId;
@@ -71,18 +71,38 @@ public class UserContext : IUserContext
 		
 		var rawJti = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Jti);
 		
-		if (string.IsNullOrEmpty(rawJti))
+		if (rawJti is null)
 		{
 			throw new SecurityTokenException("User claim 'jti' is not present");
 		}
 		
 		if (!Guid.TryParse(rawJti, out var jti))
 		{
-			throw new SecurityTokenException("User claim 'jti' is not valid");
+			throw new SecurityTokenException($"User claim 'jti' is not valid Guid. (jti: {rawJti})");
 		}
 		
 		return jti;
 	}
+	
+	public long GetExp()
+	{
+		ThrowIfNotAuthenticated();
+		
+		var rawExp = _ctx.User.FindFirstValue(JwtRegisteredClaimNames.Exp);
+		
+		if (rawExp is null)
+		{
+			throw new SecurityTokenException("User claim 'exp' is not present");
+		}
+		
+		if (!long.TryParse(rawExp, out var exp))
+		{
+			throw new SecurityTokenException($"User claim 'exp' is not valid Long. (exp: {rawExp})");
+		}
+		
+		return exp;
+	}
+	
 	
 	private void ThrowIfNotAuthenticated()
 	{

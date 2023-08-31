@@ -8,4 +8,5 @@ public interface IUserContext
 	string GetEmail();
 	string GetToken();
 	Guid GetJti();
+	long GetExp();
 }
