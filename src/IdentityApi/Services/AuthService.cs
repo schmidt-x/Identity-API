@@ -211,7 +211,7 @@ public class AuthService : IAuthService
 		return new TokensResult
 		{
 			AccessToken = handler.WriteToken(securityToken),
-			RefreshToken = refreshToken.Id
+			RefreshToken = refreshToken.Id.ToString()
 		};
 	}
 	

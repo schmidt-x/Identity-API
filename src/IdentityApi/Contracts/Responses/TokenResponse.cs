@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using IdentityApi.Domain.Constants;
 
 namespace IdentityApi.Contracts.Responses;
@@ -10,5 +9,5 @@ public class TokenResponse
 	public string AccessToken { get; set; } = default!;
 	
 	[JsonPropertyName(Key.RefreshToken)]
-	public Guid RefreshToken { get; set; }
+	public string RefreshToken { get; set; } = default!;
 }
