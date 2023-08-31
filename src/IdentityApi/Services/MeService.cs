@@ -210,10 +210,8 @@ public class MeService : IMeService
 			var currentJti = _userCtx.GetJti();
 			await _uow.TokenRepo.UpdateJtiAsync(currentJti, newJti, ct);
 			
-			if (!_jwtService.IsExpired(_userCtx.GetExp(), out var secondsLeft))
-			{
-				_tokenBlacklist.Add(currentJti.ToString(), TimeSpan.FromSeconds(secondsLeft));
-			}
+			var secondsLeft = _jwtService.GetSecondsLeft(_userCtx.GetExp());
+			_tokenBlacklist.Add(currentJti.ToString(), TimeSpan.FromSeconds(secondsLeft));
 			
 			await _uow.SaveChangesAsync(ct);
 			
@@ -297,6 +295,28 @@ public class MeService : IMeService
 		};
 		
 		return ResultSuccess(me);
+	}
+	
+	public async Task LogOutAsync(CancellationToken ct)
+	{
+		var userId = _userCtx.GetId();
+		
+		try
+		{
+			var jtis = await _uow.TokenRepo.InvalidateAllAsync(userId, ct);
+			_tokenBlacklist.AddRange(jtis.Select(x => x.ToString()), _jwtService.TotalExpirationTime);
+			
+			_logger.Information("User has logged out. User: {userId}", userId);
+			
+			await _uow.SaveChangesAsync(ct);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(ct);
+			_logger.Error(ex, "Logging out a user: {errorMessage}. User: {userId}", ex.Message, userId);
+			
+			throw;
+		}
 	}
 	
 	

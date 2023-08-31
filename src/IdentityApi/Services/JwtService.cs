@@ -56,18 +56,18 @@ public class JwtService : IJwtService
 		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
 		var secondsLeft = totalExpirationTime - secondsNow;
 		
-		return secondsLeft;
+		return secondsLeft > 0 ? secondsLeft : 0;
 	}
 	
 	public bool IsExpired(long exp, out long secondsLeft)
 	{
 		var totalExpirationTime = exp + (long)_jwtOptions.ClockSkew.TotalSeconds;
 		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
-		var left = totalExpirationTime - secondsNow;
+		var _secondsLeft = totalExpirationTime - secondsNow;
 		
-		if (left > 0)
+		if (_secondsLeft > 0)
 		{
-			secondsLeft = left;
+			secondsLeft = _secondsLeft;
 			return false;
 		}
 		

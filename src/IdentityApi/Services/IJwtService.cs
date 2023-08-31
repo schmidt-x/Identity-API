@@ -24,7 +24,8 @@ public interface IJwtService
 	/// based on its expiration time in total seconds
 	/// </summary>
 	/// <param name="exp">The expiration time of the Jwt access token</param>
-	/// <returns>The number of seconds left until the access token expires</returns>
+	/// <returns>The number of seconds left until the access token expires.
+	/// If the token is already expired, 0 is returned</returns>
 	long GetSecondsLeft(long exp);
 	
 	/// <summary>

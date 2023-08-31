@@ -13,4 +13,6 @@ public interface IMeService
 	Task<Result<string>> CacheNewEmailAsync(string newEmail, CancellationToken ct);
 	Task<Result<Me>> UpdateEmailAsync(string verificationCode, CancellationToken ct);
 	Task<Result<Me>> UpdatePasswordAsync(string password, string newPassword, CancellationToken ct);
+	
+	Task LogOutAsync(CancellationToken ct);
 }

@@ -161,4 +161,17 @@ public class MeController : ControllerBase
 		
 		return Ok(result.Value);
 	}
+	
+	/// <summary>
+	/// Logs out a user
+	/// </summary>
+	/// <response code="204">User is logged out</response>
+	[HttpGet("log-out")]
+	[ProducesResponseType((int)HttpStatusCode.NoContent)]
+	public async Task<IActionResult> LogOut(CancellationToken ct)
+	{
+		await _meService.LogOutAsync(ct);
+		
+		return NoContent();
+	}
 }

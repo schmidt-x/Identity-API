@@ -42,6 +42,8 @@ public static class ErrorMessage
 	public const string RefreshTokenInvalidated = "Refresh token is invalidated";
 	public const string RefreshTokenUsed = "Refresh token is already used";
 	public const string RefreshTokenExpired = "Refresh token is expired";
+	public const string RefreshTokenNotFound = "Refresh token is not found";
+	
 	public const string TokensNotMatch = "Tokens do not match";
 	
 	public const string VerificationCodeRequired = "Verification code is required";

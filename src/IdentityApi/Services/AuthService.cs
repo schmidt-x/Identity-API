@@ -230,6 +230,8 @@ public class AuthService : IAuthService
 			return AuthResultFail(ErrorKey.Login, ErrorMessage.WrongLoginPassword);
 		}
 		
+		_logger.Information("User has logged in. User: {userId}", user.Id);
+		
 		return AuthResultSuccess(user.Id, user.Email);
 	}
 	
@@ -251,7 +253,7 @@ public class AuthService : IAuthService
 		
 		if (refreshToken == null)
 		{
-			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.InvalidRefreshToken);
+			return AuthResultFail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenNotFound);
 		}
 		
 		if (refreshToken.Invalidated)
