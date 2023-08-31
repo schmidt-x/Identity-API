@@ -5,6 +5,12 @@ namespace IdentityApi.Services;
 public interface IJwtService
 {
 	/// <summary>
+	/// Gets the total duration of a Jwt access token
+	/// (clock skew is also considered)
+	/// </summary>
+	TimeSpan TotalExpirationTime { get; }
+	
+	/// <summary>
 	/// Updates payload and reissues new Jwt access token
 	/// </summary>
 	/// <param name="jwtToken">Jwt token to update</param>

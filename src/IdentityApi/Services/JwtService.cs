@@ -11,13 +11,15 @@ namespace IdentityApi.Services;
 
 public class JwtService : IJwtService
 {
-	private readonly JwtOptions _jwt;
+	private readonly JwtOptions _jwtOptions;
 	
 	public JwtService(IOptions<JwtOptions> jwtOptions)
 	{
-		_jwt = jwtOptions.Value;
+		_jwtOptions = jwtOptions.Value;
 	}
 
+
+	public TimeSpan TotalExpirationTime => _jwtOptions.AccessTokenLifeTime + _jwtOptions.ClockSkew;
 
 	// Note: Only the HS256 hashing algorithm is supported now
 	// In other cases, NotImplementedException is thrown
@@ -41,7 +43,7 @@ public class JwtService : IJwtService
 		
 		var newToken = newSomething + "." + jwtSecurityToken.SignatureAlgorithm switch
 		{
-			"HS256" => ComputeHashHS256(_jwt.SecretKey, newSomething),
+			"HS256" => ComputeHashHS256(_jwtOptions.SecretKey, newSomething),
 			_ => throw new NotImplementedException()
 		};
 		
@@ -50,7 +52,7 @@ public class JwtService : IJwtService
 	
 	public long GetSecondsLeft(long exp)
 	{
-		var totalExpirationTime = exp + (long)_jwt.ClockSkew.TotalSeconds;
+		var totalExpirationTime = exp + (long)_jwtOptions.ClockSkew.TotalSeconds;
 		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
 		var secondsLeft = totalExpirationTime - secondsNow;
 		
@@ -59,7 +61,7 @@ public class JwtService : IJwtService
 	
 	public bool IsExpired(long exp, out long secondsLeft)
 	{
-		var totalExpirationTime = exp + (long)_jwt.ClockSkew.TotalSeconds;
+		var totalExpirationTime = exp + (long)_jwtOptions.ClockSkew.TotalSeconds;
 		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
 		var left = totalExpirationTime - secondsNow;
 		
@@ -72,6 +74,7 @@ public class JwtService : IJwtService
 		secondsLeft = 0;
 		return true;
 	}
+	
 	
 	/// <summary>
 	/// Computes the HMAC-SHA256 hash of the given value using the provided secret key
