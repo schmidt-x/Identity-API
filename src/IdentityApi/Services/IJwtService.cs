@@ -13,5 +13,20 @@ public interface IJwtService
 	/// <returns>Updated Jwt token</returns>
 	string UpdateToken(string jwtToken, Guid newJti, string? newEmail = null);
 	
+	/// <summary>
+	/// Calculates the remaining seconds of validity for a Jwt access token
+	/// based on its expiration time in total seconds
+	/// </summary>
+	/// <param name="exp">The expiration time of the Jwt access token</param>
+	/// <returns>The number of seconds left until the access token expires</returns>
+	long GetSecondsLeft(long exp);
 	
+	/// <summary>
+	/// Indicates if a Jwt access token is expired based on its expiration time in total seconds
+	/// </summary>
+	/// <param name="exp">The expiration time of the Jwt access token</param>
+	/// <param name="secondsLeft">Variable to store the number of seconds left until the access token expires.
+	/// If it's already expired, 0 is stored</param>
+	/// <returns>True if token is expired</returns>
+	public bool IsExpired(long exp, out long secondsLeft);
 }

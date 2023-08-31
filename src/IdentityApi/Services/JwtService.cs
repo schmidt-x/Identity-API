@@ -48,6 +48,30 @@ public class JwtService : IJwtService
 		return newToken;
 	}
 	
+	public long GetSecondsLeft(long exp)
+	{
+		var totalExpirationTime = exp + (long)_jwt.ClockSkew.TotalSeconds;
+		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
+		var secondsLeft = totalExpirationTime - secondsNow;
+		
+		return secondsLeft;
+	}
+	
+	public bool IsExpired(long exp, out long secondsLeft)
+	{
+		var totalExpirationTime = exp + (long)_jwt.ClockSkew.TotalSeconds;
+		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
+		var left = totalExpirationTime - secondsNow;
+		
+		if (left > 0)
+		{
+			secondsLeft = left;
+			return false;
+		}
+		
+		secondsLeft = 0;
+		return true;
+	}
 	
 	/// <summary>
 	/// Computes the HMAC-SHA256 hash of the given value using the provided secret key
