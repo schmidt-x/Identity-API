@@ -6,7 +6,6 @@ using IdentityApi.Data.Repositories;
 using IdentityApi.Domain.Models;
 using IdentityApi.Contracts.Responses;
 using IdentityApi.Domain.Constants;
-using IdentityApi.Extensions;
 using IdentityApi.Results;
 using Serilog;
 
@@ -151,17 +150,15 @@ public class MeService : IMeService
 			return ResultFail<string>(ErrorKey.Email, $"Email address '{newEmail}' is already taken");
 		}
 		
-		var verificationCode = _codeService.Generate();
-		
 		session.EmailAddress = newEmail;
-		session.VerificationCode = verificationCode;
+		session.VerificationCode = _codeService.Generate();
 		session.Attempts = 0;
 		
 		_sessionService.Update(userIdAsString, session, TimeSpan.FromMinutes(5));
 		
 		_logger.Information("New email address is cached. New email: {newEmail}, user: {userId}", newEmail, userId);
 		
-		return ResultSuccess(verificationCode);
+		return ResultSuccess(session.VerificationCode);
 	}
 
 	public async Task<Result<Me>> UpdateEmailAsync(string verificationCode, CancellationToken ct)
@@ -187,14 +184,11 @@ public class MeService : IMeService
 		if (session.VerificationCode != verificationCode)
 		{
 			var attempts = ++session.Attempts;
-			var result = ResultFail<Me>(ErrorKey.Code, AttemptsErrors(attempts));
+			var errors = _sessionService.GetAttemptErrors(attempts);
 			
-			if (attempts >= 3)
-			{
-				_sessionService.Remove(userIdAsString);
-			}
+			_sessionService.RemoveIfExceeded(attempts, userIdAsString);
 			
-			return result;
+			return ResultFail<Me>(ErrorKey.Code, errors);
 		}
 		
 		UserProfile profile;
@@ -306,9 +300,9 @@ public class MeService : IMeService
 			var jtis = await _uow.TokenRepo.InvalidateAllAsync(userId, ct);
 			_tokenBlacklist.AddRange(jtis.Select(x => x.ToString()), _jwtService.TotalExpirationTime);
 			
-			_logger.Information("User has logged out. User: {userId}", userId);
-			
 			await _uow.SaveChangesAsync(ct);
+			
+			_logger.Information("User has logged out. User: {userId}", userId);
 		}
 		catch(Exception ex)
 		{
@@ -319,20 +313,6 @@ public class MeService : IMeService
 		}
 	}
 	
-	
-	private static string[] AttemptsErrors(int attempts)
-	{
-		var leftAttempts = 3 - attempts;
-		
-		var errorMessage = (leftAttempts) switch
-		{
-			1 => "1 last attempt is left",
-			2 => "2 more attempts are left",
-			_ => "No attempts are left"
-		};
-		
-		return new[] { "Wrong verification code", errorMessage };
-	}
 	
 	private static Result<T> ResultFail<T>(string key, params string[] errors) =>
 		new() { Errors = new() {{ key, errors }}, Succeeded = false };

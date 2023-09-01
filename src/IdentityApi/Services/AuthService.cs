@@ -53,61 +53,28 @@ public class AuthService : IAuthService
 	}
 	
 	
-	public async Task<SessionResult> CreateSessionAsync(string email, CancellationToken ct)
+	public async Task<SessionResult> CreateRegistrationSessionAsync(string email, CancellationToken ct)
 	{
 		if (await _uow.UserRepo.EmailExistsAsync(email, ct))
 		{
 			return SessionResultFail(ErrorKey.Email, $"Email address '{email}' is already taken");
 		}
 		
-		string verificationCode = _codeService.Generate();
-		var sessionId = Guid.NewGuid().ToString();
-		
 		var session = new EmailSession
 		{
 			EmailAddress = email,
-			VerificationCode = verificationCode,
+			VerificationCode = _codeService.Generate(),
 		};
 		
+		var sessionId = Guid.NewGuid().ToString();
 		_sessionService.Create(sessionId, session, TimeSpan.FromMinutes(5));
 		
 		return new SessionResult
 		{
 			Succeeded = true,
 			Id = sessionId,
-			VerificationCode = verificationCode
+			VerificationCode = session.VerificationCode
 		};
-	}
-	
-	public ResultEmpty VerifyEmail(string sessionId, string verificationCode)
-	{
-		if (!_sessionService.TryGetValue<EmailSession>(sessionId, out var session))
-		{
-			return ResultEmptyFail(ErrorKey.Session, ErrorMessage.SessionNotFound);
-		}
-		
-		if (session!.IsVerified)
-		{
-			return ResultEmptyFail(ErrorKey.Email, ErrorMessage.EmailAlreadyVerified);
-		}
-		
-		if (session.VerificationCode != verificationCode)
-		{
-			var attempts = ++session.Attempts;
-			var result = ResultEmptyFail(ErrorKey.Code, AttemptsErrors(attempts));
-			
-			if (attempts >= 3)
-			{
-				_sessionService.Remove(sessionId);
-			}
-			
-			return result;
-		}
-		
-		session.IsVerified = true;
-		_sessionService.Update(sessionId, session, TimeSpan.FromMinutes(5));
-		
-		return ResultEmptySuccess();
 	}
 	
 	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct)
@@ -344,25 +311,6 @@ public class AuthService : IAuthService
 	private static AuthenticationResult AuthResultSuccess(Guid userId, string email) =>
 		new() { Succeeded = true, Claims = new() { Id = userId, Email = email } };
 	
-	private static ResultEmpty ResultEmptyFail(string key, params string[] errors) =>
-		new() { Errors = new() { { key, errors } } };
-	
-	private static ResultEmpty ResultEmptySuccess() => new() { Succeeded = true };
-		
 	private static SessionResult SessionResultFail(string key, params string[] errors) =>
 		new() { Errors = new() { { key, errors } } };
-		
-	private static string[] AttemptsErrors(int attempts)
-	{
-		var leftAttempts = 3 - attempts;
-		
-		var error = (leftAttempts) switch
-		{
-			1 => "1 last attempt is left",
-			2 => "2 more attempts are left",
-			_ => "No attempts are left"
-		};
-		
-		return new[] { "Wrong verification code", error };
-	}
 }

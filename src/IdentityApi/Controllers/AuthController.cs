@@ -20,36 +20,39 @@ public class AuthController : ControllerBase
 {
 	private readonly IAuthService _authService;
 	private readonly IEmailSender _emailSender;
+	private readonly ISessionService _sessionService;
+	
 
-	public AuthController(IAuthService authService, IEmailSender emailSender)
+	public AuthController(IAuthService authService, IEmailSender emailSender, ISessionService sessionService)
 	{
 		_authService = authService;
 		_emailSender = emailSender;
+		_sessionService = sessionService;
 	}
 	
 	
 	/// <summary>
-	/// Sends verification code to email address
+	/// Sends verification code to an email address
 	/// </summary>
 	/// <response code="200">Verification code is sent</response>
 	/// <response code="400">Email address is already taken or invalid</response>
-	[HttpPost("registration")]
+	[HttpPost("registration/start-session")]
 	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.OK)]
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
-	public async Task<IActionResult> CreateSession(EmailRequest emailRequest, CancellationToken ct)
+	public async Task<IActionResult> RegistrationSession(EmailRequest emailRequest, CancellationToken ct)
 	{
-		var result = await _authService.CreateSessionAsync(emailRequest.Email, ct);
+		var sessionResult = await _authService.CreateRegistrationSessionAsync(emailRequest.Email, ct);
 		
-		if (!result.Succeeded)
+		if (!sessionResult.Succeeded)
 		{
-			return BadRequest(new FailResponse { Errors = result.Errors });
+			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
 		}
 		
-		var _ = _emailSender.SendAsync(emailRequest.Email, result.VerificationCode);
+		var _ = _emailSender.SendAsync(emailRequest.Email, sessionResult.VerificationCode);
 		
 		Response.Cookies.Append(
 			Key.CookieSessionId,
-			result.Id,
+			sessionResult.Id,
 			new()
 			{
 				Secure = true,
@@ -62,40 +65,7 @@ public class AuthController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Verifies email address
-	/// </summary>
-	/// <response code="200">Email address is successfully verified</response>
-	/// <response code="400">Vefirication code is wrong</response>
-	[HttpPost("registration/verify-email")]
-	[ServiceFilter(typeof(SessionCookieActionFilter))]
-	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.OK)]
-	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
-	public IActionResult VerifyEmail(CodeVerificationRequest codeVerificationRequest)
-	{
-		var id = (string) HttpContext.Items[Key.SessionId]!;
-		
-		var sessionResult = _authService.VerifyEmail(id, codeVerificationRequest.Code);
-		
-		if (!sessionResult.Succeeded)
-			return BadRequest(new FailResponse { Errors = sessionResult.Errors});
-		
-		// refresh cookie life-time
-		Response.Cookies.Append(
-			Key.CookieSessionId,
-			id,
-			new()
-			{
-				Secure = true,
-				HttpOnly = true,
-				Expires = DateTimeOffset.UtcNow.AddMinutes(5)
-			}
-		);
-		
-		return Ok(new MessageResponse { Message = "Email address successfully verified" });
-	}
-	
-	/// <summary>
-	/// Registers user
+	/// Registers a user
 	/// </summary>
 	/// <response code="200">Registration is successfuly completed</response>
 	/// <response code="400">Username is already taken or validation failed</response>
@@ -126,7 +96,7 @@ public class AuthController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Logs in user
+	/// Logs in a user
 	/// </summary>
 	/// <response code="200">User is logged in</response>
 	/// <response code="400">Validation failed</response>
@@ -154,7 +124,7 @@ public class AuthController : ControllerBase
 	} 
 	
 	/// <summary>
-	/// Refreshes tokens
+	/// Refreshes the tokens
 	/// </summary>
 	/// <response code="200">Tokens are successfully refreshed</response>
 	/// <response code="400">Tokens are missing</response>
@@ -180,4 +150,28 @@ public class AuthController : ControllerBase
 			RefreshToken = tokens.RefreshToken
 		});
 	}
+	
+	/// <summary>
+	/// Verifies a session
+	/// </summary>
+	/// <response code="204">Session is successfully verified</response>
+	/// <response code="400">Verification failed</response>
+	[HttpPatch("session/verify")]
+	[ServiceFilter(typeof(SessionCookieActionFilter))]
+	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.NoContent)]
+	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
+	public IActionResult VerifySession(CodeVerificationRequest codeRequest)
+	{
+		var sessionId = (string) HttpContext.Items[Key.SessionId]!;
+		
+		var result = _sessionService.VerifySession(sessionId, codeRequest.Code);
+		
+		if (!result.Succeeded)
+		{
+			return BadRequest(new FailResponse { Errors = result.Errors });
+		}
+		
+		return NoContent();
+	}
+	
 }

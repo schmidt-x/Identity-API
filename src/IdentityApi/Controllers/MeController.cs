@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using IdentityApi.Extensions;
@@ -19,13 +20,17 @@ public class MeController : ControllerBase
 {
 	private readonly IMeService _meService;
 	private readonly IEmailSender _emailSender;
-	private readonly IAuthService _authService;
+	private readonly ISessionService _sessionService;
 	
-	public MeController(IMeService meService, IEmailSender emailSender, IAuthService authService)
+	
+	public MeController(
+		IMeService meService,
+		IEmailSender emailSender,
+		ISessionService sessionService)
 	{
 		_meService = meService;
 		_emailSender = emailSender;
-		_authService = authService;
+		_sessionService = sessionService;
 	}
 	
 	
@@ -33,8 +38,8 @@ public class MeController : ControllerBase
 	/// Returns Me
 	/// </summary>
 	/// <response code="200">Me is returned</response>
-	[ProducesResponseType(typeof(Me), (int)HttpStatusCode.OK)]
 	[HttpGet]
+	[ProducesResponseType(typeof(Me), (int)HttpStatusCode.OK)]
 	public async Task<IActionResult> GetMe(CancellationToken ct)
 	{
 		var me = await _meService.GetAsync(ct);
@@ -47,9 +52,9 @@ public class MeController : ControllerBase
 	/// </summary>
 	/// <response code="200">Username is successfully updated</response>
 	/// <response code="400">Username is already taken or validation failed</response>
+	[HttpPatch("username-update")]
 	[ProducesResponseType(typeof(Me), (int)HttpStatusCode.OK)]
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
-	[HttpPatch("username-update")]
 	public async Task<IActionResult> UpdateUsername(UsernameUpdateRequest usernameRequest, CancellationToken ct)
 	{
 		var result = await _meService.UpdateUsernameAsync(usernameRequest.Username, usernameRequest.Password, ct);
@@ -68,11 +73,11 @@ public class MeController : ControllerBase
 	/// <response code="200">Verification code is sent</response>
 	[HttpPost("email-update")]
 	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.OK)]
-	public IActionResult StartEmailUpdatingProcess()
+	public IActionResult EmailUpdateSession()
 	{
 		var verificationCode = _meService.CreateEmailUpdateSession();
 		
-		var oldEmail = HttpContext.User.FindEmail()!;
+		var oldEmail = User.FindEmail()!;
 		var _ = _emailSender.SendAsync(oldEmail, verificationCode);
 		
 		return Ok(new MessageResponse { Message = $"Verification code is sent to '{oldEmail}' email address" });
@@ -88,9 +93,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
 	public IActionResult VerifyEmail(CodeVerificationRequest codeRequest)
 	{
-		// Note: I'm not sure is it's appropriate to use another service's method here,
-		// but the logic is completely the same 
-		var result = _authService.VerifyEmail(HttpContext.User.FindId()!, codeRequest.Code);
+		var result = _sessionService.VerifySession(User.FindId()!, codeRequest.Code);
 		
 		if (!result.Succeeded)
 		{
