@@ -3,7 +3,7 @@ using IdentityApi.Domain.Models;
 
 namespace IdentityApi.Results;
 
-public class AuthenticationResult
+public class AuthResult
 {
 	public UserClaims Claims { get; set; } = default!;
 	public bool Succeeded { get; set; }

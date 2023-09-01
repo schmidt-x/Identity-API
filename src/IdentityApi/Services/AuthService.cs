@@ -77,7 +77,7 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	public async Task<AuthenticationResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct)
+	public async Task<AuthResult> RegisterAsync(string sessionId, UserRegistrationRequest registrationRequest, CancellationToken ct)
 	{
 		if (!_sessionService.TryGetValue<EmailSession>(sessionId, out var session))
 		{
@@ -188,7 +188,7 @@ public class AuthService : IAuthService
 		};
 	}
 	
-	public async Task<AuthenticationResult> AuthenticateAsync(UserLoginRequest loginRequest, CancellationToken ct)
+	public async Task<AuthResult> AuthenticateAsync(UserLoginRequest loginRequest, CancellationToken ct)
 	{
 		var user = await _uow.UserRepo.GetAsync(loginRequest.Login, ct);
 		
@@ -202,7 +202,7 @@ public class AuthService : IAuthService
 		return AuthResultSuccess(user.Id, user.Email);
 	}
 	
-	public async Task<AuthenticationResult> ValidateTokensAsync(TokenRefreshingRequest tokens, CancellationToken ct)
+	public async Task<AuthResult> ValidateTokensAsync(TokenRefreshingRequest tokens, CancellationToken ct)
 	{
 		if (!Guid.TryParse(tokens.RefreshToken, out var refreshTokenId))
 		{
@@ -305,10 +305,10 @@ public class AuthService : IAuthService
 	}
 	
 	
-	private static AuthenticationResult AuthResultFail(string key, params string[] errors) =>
+	private static AuthResult AuthResultFail(string key, params string[] errors) =>
 		new() { Errors = new() { { key, errors } } };
 	
-	private static AuthenticationResult AuthResultSuccess(Guid userId, string email) =>
+	private static AuthResult AuthResultSuccess(Guid userId, string email) =>
 		new() { Succeeded = true, Claims = new() { Id = userId, Email = email } };
 	
 	private static SessionResult SessionResultFail(string key, params string[] errors) =>
