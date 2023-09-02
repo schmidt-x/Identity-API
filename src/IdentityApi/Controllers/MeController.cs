@@ -17,17 +17,17 @@ namespace IdentityApi.Controllers;
 [ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.Unauthorized)]
 public class MeController : ControllerBase
 {
-	private readonly IMeService _meService;
+	private readonly IUserService _userService;
 	private readonly IEmailSender _emailSender;
 	private readonly ISessionService _sessionService;
 	
 	
 	public MeController(
-		IMeService meService,
+		IUserService userService,
 		IEmailSender emailSender,
 		ISessionService sessionService)
 	{
-		_meService = meService;
+		_userService = userService;
 		_emailSender = emailSender;
 		_sessionService = sessionService;
 	}
@@ -41,7 +41,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(Me), (int)HttpStatusCode.OK)]
 	public async Task<IActionResult> GetMe(CancellationToken ct)
 	{
-		var me = await _meService.GetAsync(ct);
+		var me = await _userService.GetAsync(ct);
 		
 		return Ok(me);
 	}
@@ -56,7 +56,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
 	public async Task<IActionResult> UpdateUsername(UsernameUpdateRequest usernameRequest, CancellationToken ct)
 	{
-		var result = await _meService.UpdateUsernameAsync(usernameRequest.Username, usernameRequest.Password, ct);
+		var result = await _userService.UpdateUsernameAsync(usernameRequest.Username, usernameRequest.Password, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -74,7 +74,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.OK)]
 	public IActionResult EmailUpdateSession()
 	{
-		var verificationCode = _meService.CreateEmailUpdateSession();
+		var verificationCode = _userService.CreateEmailUpdateSession();
 		
 		var oldEmail = User.FindEmail()!;
 		var _ = _emailSender.SendAsync(oldEmail, verificationCode);
@@ -112,7 +112,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
 	public async Task<IActionResult> RegisterNewEmail(EmailRequest emailRequest, CancellationToken ct)
 	{
-		var result = await _meService.CacheNewEmailAsync(emailRequest.Email, ct);
+		var result = await _userService.CacheNewEmailAsync(emailRequest.Email, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -134,7 +134,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
 	public async Task<IActionResult> UpdateEmail(CodeVerificationRequest code, CancellationToken ct)
 	{
-		var result = await _meService.UpdateEmailAsync(code.Code, ct);
+		var result = await _userService.UpdateEmailAsync(code.Code, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -154,7 +154,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
 	public async Task<IActionResult> UpdatePassword(PasswordUpdateRequest passwordRequest, CancellationToken ct)
 	{
-		var result = await _meService.UpdatePasswordAsync(passwordRequest.Password, passwordRequest.NewPassword, ct);
+		var result = await _userService.UpdatePasswordAsync(passwordRequest.Password, passwordRequest.NewPassword, ct);
 		
 		if (!result.Succeeded)
 		{
@@ -172,7 +172,7 @@ public class MeController : ControllerBase
 	[ProducesResponseType((int)HttpStatusCode.NoContent)]
 	public async Task<IActionResult> LogOut(CancellationToken ct)
 	{
-		await _meService.LogOutAsync(ct);
+		await _userService.LogOutAsync(ct);
 		
 		return NoContent();
 	}

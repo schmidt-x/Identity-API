@@ -11,11 +11,11 @@ using Serilog;
 
 namespace IdentityApi.Services;
 
-public class MeService : IMeService
+public class UserService : IUserService
 {
 	private readonly IUserContext _userCtx;
 	private readonly IPasswordHasher _passwordHasher;
-	private readonly ICodeGenerationService _codeService;
+	private readonly ICodeGenerator _codeService;
 	private readonly ISessionService _sessionService;
 	private readonly IJwtService _jwtService;
 	private readonly IUnitOfWork _uow;
@@ -23,10 +23,10 @@ public class MeService : IMeService
 	private readonly ITokenBlacklist _tokenBlacklist;
 	
 
-	public MeService(
+	public UserService(
 		IUserContext userCtx, 
 		IPasswordHasher passwordHasher,
-		ICodeGenerationService codeService, 
+		ICodeGenerator codeService, 
 		ISessionService sessionService,
 		IJwtService jwtService,
 		IUnitOfWork uow,

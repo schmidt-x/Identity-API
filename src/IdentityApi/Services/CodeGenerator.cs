@@ -5,11 +5,11 @@ using Microsoft.Extensions.Options;
 
 namespace IdentityApi.Services;
 
-public class CodeGenerationService : ICodeGenerationService
+public class CodeGenerator : ICodeGenerator
 {
 	private readonly VerificationCodeOptions _code;
 
-	public CodeGenerationService(IOptions<VerificationCodeOptions> codeOptions)
+	public CodeGenerator(IOptions<VerificationCodeOptions> codeOptions)
 	{
 		_code = codeOptions.Value;
 	}

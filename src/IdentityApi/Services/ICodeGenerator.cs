@@ -1,6 +1,6 @@
 ﻿namespace IdentityApi.Services;
 
-public interface ICodeGenerationService
+public interface ICodeGenerator
 {
 	string Generate();
 }

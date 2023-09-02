@@ -14,7 +14,7 @@ namespace IdentityApi.Services;
 public class AuthService : IAuthService
 {
 	private readonly ISessionService _sessionService;
-	private readonly ICodeGenerationService _codeGenerator;
+	private readonly ICodeGenerator _codeGenerator;
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly IUnitOfWork _uow;
 	private readonly ILogger _logger;
@@ -23,7 +23,7 @@ public class AuthService : IAuthService
 
 	public AuthService(
 		ISessionService sessionService,
-		ICodeGenerationService codeGenerator,
+		ICodeGenerator codeGenerator,
 		IPasswordHasher passwordHasher,
 		IUnitOfWork uow,
 		ILogger logger,

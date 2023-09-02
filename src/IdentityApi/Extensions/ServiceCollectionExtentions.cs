@@ -41,13 +41,12 @@ public static class ServiceCollectionExtentions
 			.AddScoped<IEmailSender, EmailSender>()
 			.AddScoped<IPasswordHasher, PasswordHasher>()
 			.AddScoped<IUserContext, UserContext>()
+			.AddScoped<ICodeGenerator, CodeGenerator>()
+			.AddScoped<IUserService, UserService>()
+			.AddScoped<IJwtService, JwtService>()
 			
 			.AddSingleton<ISessionService, SessionService>()
-			.AddSingleton<ITokenBlacklist, TokenBlacklist>()
-			
-			.AddScoped<ICodeGenerationService, CodeGenerationService>()
-			.AddScoped<IMeService, MeService>()
-			.AddScoped<IJwtService, JwtService>();
+			.AddSingleton<ITokenBlacklist, TokenBlacklist>();
 	}
 	
 	public static IServiceCollection AddFilters(this IServiceCollection services)

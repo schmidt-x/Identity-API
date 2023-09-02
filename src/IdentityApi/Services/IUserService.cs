@@ -5,7 +5,7 @@ using IdentityApi.Results;
 
 namespace IdentityApi.Services;
 
-public interface IMeService
+public interface IUserService
 {
 	Task<Me> GetAsync(CancellationToken ct);
 	Task<Result<Me>> UpdateUsernameAsync(string newUsername, string password, CancellationToken ct);
