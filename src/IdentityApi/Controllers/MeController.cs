@@ -168,7 +168,7 @@ public class MeController : ControllerBase
 	/// Logs out a user
 	/// </summary>
 	/// <response code="204">User is logged out</response>
-	[HttpGet("log-out")]
+	[HttpPost("log-out")]
 	[ProducesResponseType((int)HttpStatusCode.NoContent)]
 	public async Task<IActionResult> LogOut(CancellationToken ct)
 	{
