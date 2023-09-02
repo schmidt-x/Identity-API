@@ -1,9 +1,14 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using IdentityApi.Domain.Constants;
+using IdentityApi.Domain.Models;
 using IdentityApi.Options;
 using IdentityApi.Extensions;
+using IdentityApi.Results;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -12,17 +17,121 @@ namespace IdentityApi.Services;
 public class JwtService : IJwtService
 {
 	private readonly JwtOptions _jwtOptions;
+	private readonly TokenValidationParameters _tokenValidationParameters;
 	
-	public JwtService(IOptions<JwtOptions> jwtOptions)
+	public JwtService(
+		IOptions<JwtOptions> jwtOptions,
+		TokenValidationParameters tokenValidationParameters)
 	{
+		_tokenValidationParameters = tokenValidationParameters;
 		_jwtOptions = jwtOptions.Value;
 	}
 
 
-	public TimeSpan TotalExpirationTime => _jwtOptions.AccessTokenLifeTime + _jwtOptions.ClockSkew;
+	public TimeSpan TotalExpirationTime => 
+		_jwtOptions.AccessTokenLifeTime + _jwtOptions.ClockSkew;
+	
+	public Tokens GenerateTokens(UserClaims user)
+	{
+		var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
+		var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+		var handler = new JwtSecurityTokenHandler();
+		
+		var jti = Guid.NewGuid();
+		var identity = new ClaimsIdentity(new[]
+		{
+			new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+			new Claim(JwtRegisteredClaimNames.Jti, jti.ToString()),
+			new Claim(JwtRegisteredClaimNames.Email, user.Email)
+		}, JwtBearerDefaults.AuthenticationScheme);
+		
+		var timeNow = DateTime.UtcNow;
+		
+		var descriptor = new SecurityTokenDescriptor
+		{
+			Subject = identity,
+			Audience = _jwtOptions.Audience,
+			Issuer = _jwtOptions.Issuer,
+			Expires = timeNow.Add(_jwtOptions.AccessTokenLifeTime),
+			SigningCredentials = credentials
+		};
+		
+		var securityToken = handler.CreateToken(descriptor);
+		
+		var refreshToken = new RefreshToken
+		{
+			Id = Guid.NewGuid(),
+			Jti = jti,
+			CreatedAt = timeNow.GetTotalSeconds(),
+			ExpiresAt = timeNow.Add(_jwtOptions.RefreshTokenLifeTime).GetTotalSeconds(),
+			UserId = user.Id,
+			Invalidated = false,
+			Used = false
+		};
+		
+		return new Tokens
+		{
+			AccessToken = handler.WriteToken(securityToken),
+			RefreshToken = refreshToken
+		};
+	}
+	
+	public ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out JwtSecurityToken? jwtSecurityToken)
+	{
+		var handler = new JwtSecurityTokenHandler();
+		jwtSecurityToken = default;
+		
+		try
+		{
+			// do I have to say hello to race-condition since it's singleton?
+			_tokenValidationParameters.ValidateLifetime = false;
+			
+			var claimsPrincipal = handler.ValidateToken(token, _tokenValidationParameters, out var securityToken);
+			
+			if (securityToken is not JwtSecurityToken _jwtSecurityToken || 
+				!_jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+			{
+				return null;
+			}
+			
+			jwtSecurityToken = _jwtSecurityToken;
+			return claimsPrincipal;
+		}
+		catch
+		{
+			return null;
+		}
+		finally
+		{
+			_tokenValidationParameters.ValidateLifetime = true;
+		}
+	}
+	
+	public ValidationResult ValidateRefreshToken(RefreshToken refreshToken, Guid jti)
+	{
+		if (refreshToken.Invalidated)
+		{
+			return ValidationResult.Fail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenInvalidated);
+		}
+		
+		if (refreshToken.Used)
+		{
+			return ValidationResult.Fail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenUsed);
+		}
+		
+		if (refreshToken.ExpiresAt < DateTime.UtcNow.GetTotalSeconds())
+		{
+			return ValidationResult.Fail(ErrorKey.RefreshToken, ErrorMessage.RefreshTokenExpired);
+		}
+		
+		if (!refreshToken.Jti.Equals(jti))
+		{
+			return ValidationResult.Fail(ErrorKey.AccessToken, ErrorMessage.TokensNotMatch);
+		}
+		
+		return ValidationResult.Success();
+	}
 
-	// Note: Only the HS256 hashing algorithm is supported now
-	// In other cases, NotImplementedException is thrown
 	public string UpdateToken(string jwtToken, Guid newJti, string? newEmail = null)
 	{
 		var jwtSecurityToken = new JwtSecurityTokenHandler().ReadJwtToken(jwtToken);
@@ -52,18 +161,14 @@ public class JwtService : IJwtService
 	
 	public long GetSecondsLeft(long exp)
 	{
-		var totalExpirationTime = exp + (long)_jwtOptions.ClockSkew.TotalSeconds;
-		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
-		var secondsLeft = totalExpirationTime - secondsNow;
+		var secondsLeft = CalculateSecondsLeft(exp);
 		
 		return secondsLeft > 0 ? secondsLeft : 0;
 	}
 	
 	public bool IsExpired(long exp, out long secondsLeft)
 	{
-		var totalExpirationTime = exp + (long)_jwtOptions.ClockSkew.TotalSeconds;
-		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
-		var _secondsLeft = totalExpirationTime - secondsNow;
+		var _secondsLeft = CalculateSecondsLeft(exp);
 		
 		if (_secondsLeft > 0)
 		{
@@ -75,6 +180,14 @@ public class JwtService : IJwtService
 		return true;
 	}
 	
+	
+	private long CalculateSecondsLeft(long exp)
+	{
+		var totalExpirationTime = exp + (long)_jwtOptions.ClockSkew.TotalSeconds;
+		var secondsNow = DateTime.UtcNow.GetTotalSeconds();
+		
+		return  totalExpirationTime - secondsNow;
+	}
 	
 	/// <summary>
 	/// Computes the HMAC-SHA256 hash of the given value using the provided secret key

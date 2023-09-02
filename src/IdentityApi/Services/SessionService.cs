@@ -43,22 +43,22 @@ public class SessionService : ISessionService
 		return Create(key, value, absoluteExpirationRelativeToNow);
 	}
 	
-	public ResultEmpty VerifySession(string sessionId, string verificationCode, bool removeIfAttemptsExceeded = true)
+	public ValidationResult VerifySession(string sessionId, string verificationCode, bool removeIfAttemptsExceeded = true)
 	{
 		if (!_memoryCache.TryGetValue<Session>(sessionId, out var session))
 		{
-			return ResultEmptyFail(ErrorKey.Session, ErrorMessage.SessionNotFound);
+			return ValidationResult.Fail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
 		if (session!.IsVerified)
 		{
-			return ResultEmptyFail(ErrorKey.Session, "Session is already verified"); // TODO
+			return ValidationResult.Fail(ErrorKey.Session, ErrorMessage.SessionAlreadyVerified);
 		}
 		
 		if (session.VerificationCode != verificationCode)
 		{
 			var attempts = ++session.Attempts;
-			var result = ResultEmptyFail(ErrorKey.Code, GetAttemptErrors(attempts));
+			var result = ValidationResult.Fail(ErrorKey.Code, GetAttemptErrors(attempts));
 			
 			if (removeIfAttemptsExceeded && attempts >= _maxAttempts)
 				_memoryCache.Remove(sessionId);
@@ -71,7 +71,7 @@ public class SessionService : ISessionService
 		// refresh the life-time
 		_memoryCache.Set(sessionId, session, TimeSpan.FromMinutes(5));
 		
-		return ResultEmptySuccess();
+		return ValidationResult.Success();
 	}
 	
 	public string[] GetAttemptErrors(int attempts)
@@ -93,11 +93,5 @@ public class SessionService : ISessionService
 		if (attempts >= _maxAttempts)
 			_memoryCache.Remove(sessionId);
 	}
-	
-	
-	private static ResultEmpty ResultEmptyFail(string key, params string[] errors) =>
-		new() { Errors = new() { { key, errors } } };
-	
-	private static ResultEmpty ResultEmptySuccess() => new() { Succeeded = true };
 	
 }

@@ -63,7 +63,7 @@ public class MeService : IMeService
 	{
 		if (await _uow.UserRepo.UsernameExistsAsync(newUsername, ct))
 		{
-			return ResultFail<Me>(ErrorKey.Username, $"Username '{newUsername}' is already taken");
+			return Result<Me>.Fail(ErrorKey.Username, $"Username '{newUsername}' is already taken");
 		}
 		
 		var userId = _userCtx.GetId();
@@ -71,7 +71,7 @@ public class MeService : IMeService
 		
 		if (!_passwordHasher.VerifyPassword(password, user.PasswordHash))
 		{
-			return ResultFail<Me>(ErrorKey.Password, ErrorMessage.WrongPassword);
+			return Result<Me>.Fail(ErrorKey.Password, ErrorMessage.WrongPassword);
 		}
 		
 		UserProfile profile;
@@ -102,7 +102,7 @@ public class MeService : IMeService
 			Token = _userCtx.GetToken()
 		};
 		
-		return ResultSuccess(me);
+		return Result<Me>.Success(me);
 	}
 
 	public string CreateEmailUpdateSession()
@@ -132,22 +132,22 @@ public class MeService : IMeService
 		
 		if (!_sessionService.TryGetValue<EmailSession>(userIdAsString, out var session))
 		{
-			return ResultFail<string>(ErrorKey.Session, ErrorMessage.SessionNotFound);
+			return Result<string>.Fail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
 		if (session!.IsVerified == false)
 		{
-			return ResultFail<string>(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
+			return Result<string>.Fail(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
 		}
 		
 		if (_userCtx.GetEmail() == newEmail)
 		{
-			return ResultFail<string>(ErrorKey.Email, ErrorMessage.EmailsEqual);
+			return Result<string>.Fail(ErrorKey.Email, ErrorMessage.EmailsEqual);
 		}
 		
 		if (await _uow.UserRepo.EmailExistsAsync(newEmail, ct))
 		{
-			return ResultFail<string>(ErrorKey.Email, $"Email address '{newEmail}' is already taken");
+			return Result<string>.Fail(ErrorKey.Email, $"Email address '{newEmail}' is already taken");
 		}
 		
 		session.EmailAddress = newEmail;
@@ -158,7 +158,7 @@ public class MeService : IMeService
 		
 		_logger.Information("New email address is cached. New email: {newEmail}, user: {userId}", newEmail, userId);
 		
-		return ResultSuccess(session.VerificationCode);
+		return Result<string>.Success(session.VerificationCode);
 	}
 
 	public async Task<Result<Me>> UpdateEmailAsync(string verificationCode, CancellationToken ct)
@@ -168,17 +168,17 @@ public class MeService : IMeService
 		
 		if (!_sessionService.TryGetValue<EmailSession>(userIdAsString, out var session))
 		{
-			return ResultFail<Me>(ErrorKey.Session, ErrorMessage.SessionNotFound);
+			return Result<Me>.Fail(ErrorKey.Session, ErrorMessage.SessionNotFound);
 		}
 		
 		if (session!.IsVerified == false)
 		{
-			return ResultFail<Me>(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
+			return Result<Me>.Fail(ErrorKey.Email, ErrorMessage.OldEmailNotVerified);
 		}
 		
 		if (string.IsNullOrWhiteSpace(session.EmailAddress))
 		{
-			return ResultFail<Me>(ErrorKey.Email, ErrorMessage.NewEmailRequired);
+			return Result<Me>.Fail(ErrorKey.Email, ErrorMessage.NewEmailRequired);
 		}
 		
 		if (session.VerificationCode != verificationCode)
@@ -188,7 +188,7 @@ public class MeService : IMeService
 			
 			_sessionService.RemoveIfExceeded(attempts, userIdAsString);
 			
-			return ResultFail<Me>(ErrorKey.Code, errors);
+			return Result<Me>.Fail(ErrorKey.Code, errors);
 		}
 		
 		UserProfile profile;
@@ -235,7 +235,7 @@ public class MeService : IMeService
 		
 		_sessionService.Remove(userIdAsString);
 		
-		return ResultSuccess(me);
+		return Result<Me>.Success(me);
 	}
 	
 	public async Task<Result<Me>> UpdatePasswordAsync(string password, string newPassword, CancellationToken ct)
@@ -245,7 +245,7 @@ public class MeService : IMeService
 		
 		if (!_passwordHasher.VerifyPassword(password, passwordHash))
 		{
-			return ResultFail<Me>(ErrorKey.Password, ErrorMessage.WrongPassword);
+			return Result<Me>.Fail(ErrorKey.Password, ErrorMessage.WrongPassword);
 		}
 		
 		var newJti = Guid.NewGuid();
@@ -288,7 +288,7 @@ public class MeService : IMeService
 			Token = newToken
 		};
 		
-		return ResultSuccess(me);
+		return Result<Me>.Success(me);
 	}
 	
 	public async Task LogOutAsync(CancellationToken ct)
@@ -312,12 +312,5 @@ public class MeService : IMeService
 			throw;
 		}
 	}
-	
-	
-	private static Result<T> ResultFail<T>(string key, params string[] errors) =>
-		new() { Errors = new() {{ key, errors }}, Succeeded = false };
-		
-	private static Result<T> ResultSuccess<T>(T value) =>
-		new() { Value = value , Succeeded = true };
 	
 }

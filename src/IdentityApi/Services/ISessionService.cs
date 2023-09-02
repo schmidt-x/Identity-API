@@ -12,7 +12,7 @@ public interface ISessionService
 	bool TryGetValue<T>(object key, out T? value);
 	void Remove(object key);
 	
-	ResultEmpty VerifySession(string sessionId, string verificationCode, bool removeIfAttemptsExceeded = true);
+	ValidationResult VerifySession(string sessionId, string verificationCode, bool removeIfAttemptsExceeded = true);
 	string[] GetAttemptErrors(int attempts);
 	void RemoveIfExceeded(int attempts, string sessionId);
 }

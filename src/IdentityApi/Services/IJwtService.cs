@@ -1,9 +1,36 @@
 ﻿using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using IdentityApi.Domain.Models;
+using IdentityApi.Results;
 
 namespace IdentityApi.Services;
 
 public interface IJwtService
 {
+	/// <summary>
+	/// Generated Access and Refresh tokens
+	/// </summary>
+	/// <param name="claims"><see cref="UserClaims"/> that are to be included into payload of Jwt access token</param>
+	/// <returns>Generated <see cref="Tokens"/></returns>
+	Tokens GenerateTokens(UserClaims claims);
+	
+	/// <summary>
+	/// Validates Jwt access token
+	/// </summary>
+	/// <param name="token">Access token to validate</param>
+	/// <param name="jwtSecurityToken">If succeeded, <see cref="JwtSecurityToken"/> of the validated token is stored. Otherwise, null </param>
+	/// <returns>If succeeded, <see cref="ClaimsPrincipal"/> of the validated token. Otherwise, null</returns>
+	ClaimsPrincipal? ValidateTokenExceptLifetime(string token, out JwtSecurityToken? jwtSecurityToken);
+	
+	/// <summary>
+	/// Validates refresh token
+	/// </summary>
+	/// <param name="refreshToken"><see cref="RefreshToken"/> to validate</param>
+	/// <param name="jti">The unique identifier (jti) of the associated access token</param>
+	/// <returns><see cref="ValidationResult"/></returns>
+	ValidationResult ValidateRefreshToken(RefreshToken refreshToken, Guid jti);
+	
 	/// <summary>
 	/// Gets the total duration of a Jwt access token
 	/// (clock skew is also considered)
