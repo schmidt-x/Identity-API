@@ -11,6 +11,6 @@ public class EmailRequestValidator : AbstractValidator<EmailRequest>
 		RuleFor(x => x.Email)
 			.NotEmpty().OverridePropertyName(ErrorKey.Email)
 				.WithMessage(ErrorMessage.EmailRequired)
-			.EmailAddress().WithMessage(ErrorMessage.InvalidEmail);
+			.EmailAddress().WithMessage(ErrorMessage.EmailInvalid);
 	}
 }

@@ -13,6 +13,6 @@ public interface IAuthService
 	Task<AuthResult> AuthenticateAsync(UserLoginRequest loginRequest, CancellationToken ct);
 	Task<TokensResult> GenerateTokensAsync(UserClaims user, CancellationToken ct);
 	Task<AuthResult> ValidateTokensAsync(TokenRefreshingRequest tokens, CancellationToken ct);
-	
-	// Task<SessionResult> CreateForgotPasswordSessionAsync(string email, CancellationToken ct);
+	Task<SessionResult> CreateForgotPasswordSessionAsync(string email, CancellationToken ct);
+	Task<AuthResult> RestorePasswordAsync(string sessionId, string newPassword, CancellationToken ct);	
 }

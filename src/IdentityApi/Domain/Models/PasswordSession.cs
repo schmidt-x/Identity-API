@@ -1,4 +1,8 @@
-﻿namespace IdentityApi.Domain.Models;
+﻿using System;
+
+namespace IdentityApi.Domain.Models;
 
 public class PasswordSession : Session
-{ }
+{
+	public Guid UserId { get; set; }
+}

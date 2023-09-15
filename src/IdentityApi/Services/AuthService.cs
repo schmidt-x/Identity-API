@@ -68,7 +68,7 @@ public class AuthService : IAuthService
 		
 		if (session!.IsVerified == false)
 		{
-			return AuthResult.Fail(ErrorKey.Email, ErrorMessage.EmailNotVerified);
+			return AuthResult.Fail(ErrorKey.Session, ErrorMessage.SessionNotVerified);
 		}
 		
 		if (await _uow.UserRepo.UsernameExistsAsync(registrationRequest.Username, ct))
@@ -87,7 +87,7 @@ public class AuthService : IAuthService
 			CreatedAt = timeNow,
 			UpdatedAt = timeNow,
 			Email = session.EmailAddress,
-			Role = Role.User
+			Role = Role.User // new created user always has role 'user'
 		};
 		
 		try
@@ -216,4 +216,70 @@ public class AuthService : IAuthService
 		return AuthResult.Success(userClaims);
 	}
 	
+	public async Task<SessionResult> CreateForgotPasswordSessionAsync(string email, CancellationToken ct)
+	{
+		if (!await _uow.UserRepo.EmailExistsAsync(email, ct))
+		{
+			return SessionResult.Fail(ErrorKey.Email, ErrorMessage.EmailNotExist);
+		}
+		
+		var session = new PasswordSession
+		{
+			UserId = await _uow.UserRepo.GetIdByEmailAsync(email, ct),
+			VerificationCode = _codeGenerator.Generate(),
+			IsVerified = false,
+			Attempts = 0
+		};
+		
+		var sessionId = Guid.NewGuid().ToString();
+		_sessionService.Create(sessionId, session, TimeSpan.FromMinutes(5));
+		
+		return SessionResult.Success(sessionId, session.VerificationCode);
+	}
+	
+	public async Task<AuthResult> RestorePasswordAsync(string sessionId, string newPassword, CancellationToken ct)
+	{
+		if (!_sessionService.TryGetValue<PasswordSession>(sessionId, out var session))
+		{
+			return AuthResult.Fail(ErrorKey.Session, ErrorMessage.SessionNotFound);
+		}
+		
+		if (session!.IsVerified == false)
+		{
+			return AuthResult.Fail(ErrorKey.Session, ErrorMessage.SessionNotVerified);
+		}
+		
+		var userId = session.UserId;
+		
+		var passwordHash = await _uow.UserRepo.GetPasswordHashAsync(userId, ct);
+		
+		if (_passwordHasher.VerifyPassword(newPassword, passwordHash))
+		{
+			return AuthResult.Fail(ErrorKey.Password, ErrorMessage.PasswordsEqual);
+		}
+		
+		UserProfile profile;
+		try
+		{
+			profile = await _uow.UserRepo.UpdatePasswordAsync(userId, _passwordHasher.HashPassword(newPassword), ct);
+			await _uow.SaveChangesAsync(ct);
+			
+			_logger.Information("Password is updated. User: {userId}", userId);
+		}
+		catch(Exception ex)
+		{
+			await _uow.UndoChangesAsync(CancellationToken.None);
+			_logger.Error(ex, "Updating password: {errorMessage}. User: {userId}", ex.Message, userId);
+			
+			throw;
+		}
+		
+		var userClaims = new UserClaims
+		{
+			Id = userId,
+			Email = profile.Email
+		};
+		
+		return AuthResult.Success(userClaims);
+	}
 }

@@ -22,7 +22,6 @@ public class AuthController : ControllerBase
 	private readonly IEmailSender _emailSender;
 	private readonly ISessionService _sessionService;
 	
-
 	public AuthController(IAuthService authService, IEmailSender emailSender, ISessionService sessionService)
 	{
 		_authService = authService;
@@ -32,7 +31,7 @@ public class AuthController : ControllerBase
 	
 	
 	/// <summary>
-	/// Sends verification code to an email address
+	/// Sends verification code to email address
 	/// </summary>
 	/// <response code="200">Verification code is sent</response>
 	/// <response code="400">Email address is already taken or invalid</response>
@@ -65,7 +64,7 @@ public class AuthController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Registers a user
+	/// Registers user
 	/// </summary>
 	/// <response code="200">Registration is successfuly completed</response>
 	/// <response code="400">Username is already taken or validation failed</response>
@@ -96,7 +95,7 @@ public class AuthController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Logs in a user
+	/// Logs in user
 	/// </summary>
 	/// <response code="200">User is logged in</response>
 	/// <response code="400">Validation failed</response>
@@ -124,7 +123,7 @@ public class AuthController : ControllerBase
 	} 
 	
 	/// <summary>
-	/// Refreshes the tokens
+	/// Refreshes tokens
 	/// </summary>
 	/// <response code="200">Tokens are successfully refreshed</response>
 	/// <response code="400">Tokens are missing</response>
@@ -152,10 +151,71 @@ public class AuthController : ControllerBase
 	}
 	
 	/// <summary>
-	/// Verifies a session
+	///  Sends verification code to email address
+	/// </summary>
+	/// <response code="200">Verifivation code is sent</response>
+	/// <response code="400">Email address does not exist or invalid</response>
+	[HttpPost("forgot-password/start-session")]
+	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.OK)]
+	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
+	public async Task<IActionResult> ForgotPasswordSession(EmailRequest emailRequest, CancellationToken ct)
+	{
+		var sessionResult = await _authService.CreateForgotPasswordSessionAsync(emailRequest.Email, ct);
+		
+		if (!sessionResult.Succeeded)
+		{
+			return BadRequest(new FailResponse { Errors = sessionResult.Errors });
+		}
+		
+		_ = _emailSender.SendAsync(emailRequest.Email, sessionResult.VerificationCode);
+		
+		Response.Cookies.Append(
+			Key.CookieSessionId,
+			sessionResult.Id,
+			new()
+			{
+				Secure = true,
+				HttpOnly = true,
+				Expires = DateTimeOffset.UtcNow.AddMinutes(5)
+			});
+		
+		return Ok(new MessageResponse { Message = $"Verification code is sent to '{emailRequest.Email}' email address" });
+	}
+	
+	/// <summary>
+	/// Restores password
+	/// </summary>
+	/// <response code="200">Password is successfully restored</response>
+	/// <response code="400">Session is not found or verified</response>
+	[HttpPatch("forgot-password/restore")]
+	[ServiceFilter(typeof(SessionCookieActionFilter))]
+	[ProducesResponseType(typeof(TokenResponse), (int)HttpStatusCode.OK)]
+	[ProducesResponseType(typeof(FailResponse), (int)HttpStatusCode.BadRequest)]
+	public async Task<IActionResult> RestorePassword(PasswordRequest passwordRequest, CancellationToken ct)
+	{
+		var sessionId = (string) HttpContext.Items[Key.SessionId]!;
+		
+		var result = await _authService.RestorePasswordAsync(sessionId, passwordRequest.Password, ct);
+		
+		if (!result.Succeeded)
+		{
+			return BadRequest(new FailResponse { Errors = result.Errors });
+		}
+		
+		var tokens = await _authService.GenerateTokensAsync(result.Claims, ct);
+		
+		return Ok(new TokenResponse
+		{
+			AccessToken = tokens.AccessToken,
+			RefreshToken = tokens.RefreshToken
+		});
+	}
+	
+	/// <summary>
+	/// Verifies session
 	/// </summary>
 	/// <response code="204">Session is successfully verified</response>
-	/// <response code="400">Verification failed</response>
+	/// <response code="400">Session is not found or verification failed</response>
 	[HttpPatch("session/verify")]
 	[ServiceFilter(typeof(SessionCookieActionFilter))]
 	[ProducesResponseType(typeof(MessageResponse), (int)HttpStatusCode.NoContent)]
@@ -170,6 +230,18 @@ public class AuthController : ControllerBase
 		{
 			return BadRequest(new FailResponse { Errors = result.Errors });
 		}
+		
+		// refresh the life-time
+		Response.Cookies.Append(
+			Key.CookieSessionId,
+			sessionId,
+			new()
+			{
+				Secure = true,
+				HttpOnly = true,
+				Expires = DateTimeOffset.UtcNow.AddMinutes(5)
+			}
+		);
 		
 		return NoContent();
 	}

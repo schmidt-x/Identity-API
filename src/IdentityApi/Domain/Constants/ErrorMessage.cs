@@ -4,6 +4,7 @@ public static class ErrorMessage
 {
 	
 	public const string SessionNotFound = "Session is not found";
+	public const string SessionNotVerified = "Session is not verified";
 	public const string SessionIdNotFound = "Session ID is not found";
 	public const string InvalidSessionId = "Invalid session ID";
 	public const string SessionAlreadyVerified = "Session is already verified";
@@ -12,13 +13,12 @@ public static class ErrorMessage
 	
 	public const string UnexpectedError = "Unexpected error has occured";
 	
-	public const string EmailAlreadyVerified = "Email address is already verified";
-	public const string EmailNotVerified = "Email address is not verified";
 	public const string OldEmailNotVerified = "Old email address is not verified";
 	public const string EmailRequired = "Email address is required";
 	public const string NewEmailRequired = "New email address is required";
-	public const string InvalidEmail = "Invalid email address";
+	public const string EmailInvalid = "Invalid email address";
 	public const string EmailsEqual = "New email address cannot be the same as the old email";
+	public const string EmailNotExist = "Email address does not exist";
 	
 	public const string UsernameRequired = "Username is required";
 	public const string UsernameTooShort = "Username must contain at least 3 characters";

@@ -19,4 +19,5 @@ public interface IUserRepository
 	Task<UserProfile> UpdateUsernameAsync(Guid id, string username, CancellationToken ct);
 	Task<UserProfile> UpdateEmailAsync(Guid id, string email, CancellationToken ct);
 	Task<UserProfile> UpdatePasswordAsync(Guid id, string password, CancellationToken ct);
+	Task<Guid> GetIdByEmailAsync(string email, CancellationToken ct);
 }

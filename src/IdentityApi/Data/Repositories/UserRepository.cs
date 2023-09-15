@@ -152,4 +152,12 @@ public class UserRepository : IUserRepository
 		return _db.LoadSingleAsync<UserProfile>(sql, parameters, ct);
 	}
 	
+	public async Task<Guid> GetIdByEmailAsync(string email, CancellationToken ct)
+	{
+		const string sql = "SELECT id FROM [User] WHERE email = @email";
+		
+		var parameters = new DynamicParameters(new { email });
+		
+		return await _db.LoadScalarAsync<Guid>(sql, parameters, ct);
+	}
 }

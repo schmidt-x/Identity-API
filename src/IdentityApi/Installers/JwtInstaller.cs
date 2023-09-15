@@ -88,6 +88,10 @@ public static class JwtInstaller
 				return;
 			}
 			
+			// TODO include role claim back to the jwt access token.
+			// check if a role is correct making a request to db (as an additional security measure)
+			
+			// TODO remove all of this
 			// Since the 'role' claim is not stored inside the Jwt token,
 			// we need to retrieve it from the database and add it to the request claims.
 			// This additional security measure ensures that the 'role' claim is retrieved dynamically
