@@ -31,17 +31,24 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
 			sb.Append("Audience is required\n");
 		}
 		
-		if (options.AccessTokenLifeTime.TotalMinutes is > 5 or < 1)
+		if (options.AccessTokenLifeTime.TotalSeconds is > 300 or < 60)
 		{
-			sb.Append("The total minutes of access token must be in the range of 1 to 5. ")
-				.Append("Actual: ").Append(options.AccessTokenLifeTime.TotalMinutes)
+			sb.Append("The total time of access token must be in the range of 1 to 5 minutes. ")
+				.Append("Actual: ").Append(options.AccessTokenLifeTime.ToString())
 				.AppendLine();
 		}
-		
-		if (options.RefreshTokenLifeTime.TotalDays is < 7 or > 180)
+
+		if (options.RefreshTokenLifeTime.TotalDays < 7 || options.RefreshTokenLifeTime.TotalSeconds > (180 * 86400))
 		{
-			sb.Append("The total days of refresh token must be in the range of 7 to 180. ")
-				.Append("Actual: ").Append(options.RefreshTokenLifeTime.TotalDays)
+			sb.Append("The total time of refresh token must be in the range of 7 to 180 days. ")
+				.Append("Actual: ").Append(options.RefreshTokenLifeTime.ToString())
+				.AppendLine();
+		}
+
+		if (options.ClockSkew.TotalSeconds > 180)
+		{
+			sb.Append("The total time of clock skew must not exceed 3 minutes. ")
+				.Append("Actual: ").Append(options.ClockSkew.ToString())
 				.AppendLine();
 		}
 		
