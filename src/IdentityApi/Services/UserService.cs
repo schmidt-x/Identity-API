@@ -306,7 +306,7 @@ public class UserService : IUserService
 		}
 		catch(Exception ex)
 		{
-			await _uow.UndoChangesAsync(ct);
+			await _uow.UndoChangesAsync(CancellationToken.None);
 			_logger.Error(ex, "Logging out a user: {errorMessage}. User: {userId}", ex.Message, userId);
 			
 			throw;
